@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-天鑽 The Regent - Scraper v18 (SPA/JSON Decode Fix)
-破解利嘉閣的 Single Page Application 結構，從 JSON Script 中提取資料。
+天鑽 The Regent - Scraper v19 (28Hse + House730 + Ricacorp Debug)
+加入 House730 作為新來源，並對利嘉閣進行連線檢測。
 """
 
 import json
@@ -11,7 +11,7 @@ import urllib.request
 import re
 import time
 import random
-import html  # [新增] 用來解碼 HTML
+import html
 from datetime import datetime
 from pathlib import Path
 from email.mime.text import MIMEText
@@ -22,8 +22,10 @@ CONFIG = {
     "CACHE_FILE": "data/listings_cache.json",
     "OUTPUT_FILE": "data/listings.json",
     "EMAIL_RECIPIENTS": ["acforgames9394@gmail.com"],
+    # 網址設定
     "URL_28HSE": "https://www.28hse.com/buy/a3/dg45/c22902",
-    "URL_RICA": "https://www.ricacorp.com/zh-hk/property/list/buy/%E5%A4%A9%E9%91%BD-estate-%E5%A4%A7%E5%9F%94%E5%8D%8A%E5%B1%B1-hma-hk"
+    "URL_RICA": "https://www.ricacorp.com/zh-hk/property/list/buy/%E5%A4%A9%E9%91%BD-estate-%E5%A4%A7%E5%9F%94%E5%8D%8A%E5%B1%B1-hma-hk",
+    "URL_H730": "https://www.house730.com/buy/s/%E5%A4%A9%E9%91%BD/"
 }
 
 def log(msg):
@@ -43,7 +45,7 @@ def get_headers():
 def fetch_url(url):
     log(f"🌍 Fetching: {url}")
     try:
-        time.sleep(random.uniform(2, 4))
+        time.sleep(random.uniform(2, 5))
         req = urllib.request.Request(url, headers=get_headers())
         with urllib.request.urlopen(req, timeout=30) as resp:
             return resp.read().decode('utf-8', errors='ignore')
@@ -52,7 +54,7 @@ def fetch_url(url):
         return None
 
 # =============================================================================
-# 1. 28Hse (保持完美狀態)
+# 1. 28Hse (v14 Cleaner Version - 保持完美)
 # =============================================================================
 def scrape_28hse():
     log("--- Scraping 28Hse ---")
@@ -66,6 +68,8 @@ def scrape_28hse():
     for chunk in chunks[1:]:
         try:
             tower = 0; floor = "??"; unit = "?"
+            
+            # 抓資料
             full_desc_match = re.search(r'unit_desc"[^>]*>\s*(.*?)\s*<', chunk)
             if full_desc_match:
                 full_text = full_desc_match.group(1)
@@ -107,59 +111,103 @@ def scrape_28hse():
     return listings
 
 # =============================================================================
-# 2. Ricacorp (針對 SPA JSON 結構)
+# 2. House730 (New)
 # =============================================================================
-def scrape_ricacorp():
-    log("--- Scraping Ricacorp ---")
-    raw_response = fetch_url(CONFIG["URL_RICA"])
-    if not raw_response: return []
+def scrape_house730():
+    log("--- Scraping House730 ---")
+    html_raw = fetch_url(CONFIG["URL_H730"])
+    if not html_raw: return []
     
-    # [關鍵步驟] 利嘉閣資料藏在 JSON Script 內，而且被編碼了 (e.g. &quot;)
-    # 必須先解碼，Regex 才能生效
-    clean_html = html.unescape(raw_response)
-    
-    # 檢查是否被 Incapsula 防火牆擋住
-    if "Incapsula" in clean_html or "Request unsuccessful" in clean_html:
-        log("🚨 Ricacorp Blocked by Firewall.")
+    # 檢查標題
+    if "Cloudflare" in html_raw or "Security" in html_raw:
+        log("🚨 House730 Blocked by Cloudflare.")
         return []
 
     listings = []
+    # House730 結構通常係 "item-mod" 或類似
+    # 我地用通用暴力搜尋法，因為 House730 格式比較標準
     
-    # 策略：因為解碼後資料會變成一長串文字
-    # 我們根據你截圖的格式 "天鑽 8座 1房" 來抓
-    # 尋找: 天鑽... (任意空白) ... 數字 + 座 ...... (400字內) ..... $ + 數字
+    clean_html = html_raw.replace('\n', ' ')
     
-    # Regex 解釋:
-    # 天鑽\s+            -> 必須見到天鑽
-    # (?:第)?(\d+)\s*座  -> 抓座號 (Group 1)
-    # .{0,400}?         -> 往後找
-    # \$([\d,]+)        -> 抓價錢 (Group 2)
+    # 尋找: 天鑽...座...萬
+    # Regex: 天鑽\s*(?:第)?(\d+)座.{0,200}?\$([\d,]+)萬
+    matches = re.finditer(r'天鑽\s*(?:第)?(\d+)座.{0,200}?\$([\d,]+)萬', clean_html)
     
-    pattern = r'天鑽\s+(?:第)?(\d+)\s*座.{0,400}?\$\s*([\d,]+)'
-    
-    matches = re.finditer(pattern, clean_html)
     found_count = 0
-    
     for match in matches:
         try:
             tower = int(match.group(1))
             price = int(match.group(2).replace(',', '')) * 10000
             
-            # 嘗試在匹配到的文字周圍找樓層 (低/中/高)
-            full_match_text = match.group(0)
-            floor = "??"
-            f_match = re.search(r'(低|中|高)層', full_match_text)
-            if f_match: floor = f_match.group(1)
+            # 抓連結 (往回找 href)
+            # 由於 regex 抓唔到 href，我地用列表頁做 link
+            link = CONFIG["URL_H730"]
             
-            # 利嘉閣連結 (固定前綴 + 搜尋參數，因為難以從 JSON 抓準確連結)
+            desc = f"第{tower}座 (House730)"
+            
+            listing = {
+                "id": f"h730-{tower}-{price}",
+                "tower": tower, "floor": "??", "unit": "?",
+                "price": price, "raw_desc": desc, "url": link,
+                "source": "hkp", # 用紫色 (借用 hkp style)
+                "sourceName": "House730",
+                "scrapedAt": datetime.now().isoformat()
+            }
+            
+            if not any(l["id"] == listing["id"] for l in listings):
+                listings.append(listing)
+                found_count += 1
+                log(f"   ✅ House730: T{tower} ${price/10000}萬")
+        except: continue
+        
+    if found_count == 0:
+        log("⚠️ House730 found 0 items. (Maybe Regex mismatch or no listings)")
+        
+    return listings
+
+# =============================================================================
+# 3. Ricacorp (Debug Mode)
+# =============================================================================
+def scrape_ricacorp():
+    log("--- Scraping Ricacorp (Diagnostic) ---")
+    html_raw = fetch_url(CONFIG["URL_RICA"])
+    if not html_raw: return []
+    
+    # 【DEBUG】印出標題，確認是否被 Block
+    title_match = re.search(r'<title>(.*?)</title>', html_raw, re.IGNORECASE)
+    page_title = title_match.group(1) if title_match else "Unknown"
+    log(f"   [Ricacorp Page Title]: {page_title}")
+    
+    if "Security" in page_title or "Just a moment" in page_title:
+        log("🚨 Ricacorp is serving a Challenge Page (Blocked).")
+        return []
+
+    # 嘗試抓取 (如果無 Block)
+    listings = []
+    clean_html = html.unescape(html_raw).replace('\n', ' ')
+    
+    # 嘗試極寬鬆 Regex: 數字+座 ... $數字
+    pattern = r'(\d+)\s*座.{0,1000}?\$\s*([\d,]+)'
+    matches = re.finditer(pattern, clean_html)
+    
+    found_count = 0
+    for match in matches:
+        try:
+            tower = int(match.group(1))
+            # 過濾：只抓 8-19 座，避免抓到雜訊 (例如 "3座" 可能係其他野)
+            if tower < 8 or tower > 19: continue
+            
+            price = int(match.group(2).replace(',', '')) * 10000
+            if price < 4000000: continue # 避免抓到租盤 ($18,000)
+
             link = CONFIG["URL_RICA"]
             desc = f"第{tower}座 (利嘉閣)"
 
             listing = {
                 "id": f"rica-{tower}-{price}",
-                "tower": tower, "floor": floor, "unit": "?",
+                "tower": tower, "floor": "??", "unit": "?",
                 "price": price, "raw_desc": desc, "url": link,
-                "source": "centanet", # 橙色標籤
+                "source": "centanet", # 橙色
                 "sourceName": "Ricacorp",
                 "scrapedAt": datetime.now().isoformat()
             }
@@ -169,15 +217,12 @@ def scrape_ricacorp():
                 found_count += 1
                 log(f"   ✅ Ricacorp: T{tower} ${price/10000}萬")
         except: continue
-    
-    if found_count == 0:
-        log("⚠️ Ricacorp connected but 0 listings found. Structure might differ.")
         
     return listings
 
 # --- Main ---
 def main():
-    log("🚀 Starting Scraper v18 (JSON Fix)...")
+    log("🚀 Starting Scraper v19 (Multi-Source)...")
     
     seen_ids = set()
     try:
@@ -188,6 +233,7 @@ def main():
 
     all_listings = []
     all_listings.extend(scrape_28hse())
+    all_listings.extend(scrape_house730())
     all_listings.extend(scrape_ricacorp())
     
     log(f"📊 Total Found: {len(all_listings)}")
@@ -201,7 +247,7 @@ def main():
     
     if new_listings and sender and password:
         subject = f"🔥 天鑽新盤通報 ({len(new_listings)})"
-        lines = ["最新放盤 (28Hse + 利嘉閣):", ""]
+        lines = ["最新放盤:", ""]
         for l in new_listings:
             loc = f"{l['floor']}層 {l['unit']}室" if l['unit'] != "?" else ""
             lines.append(f"📍 第 {l['tower']} 座 {loc} | ${l['price']/10000:,.0f}萬 | {l['sourceName']}")
