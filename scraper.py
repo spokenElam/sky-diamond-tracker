@@ -27,17 +27,13 @@ log("")
 
 CONFIG = {
     "TARGET_TOWERS": [8, 9, 10, 11, 12, 13, 15, 16, 18],
-    "MAX_SIZE": 600,
-    "TARGET_ROOMS": [1, 2],
     "EMAIL_RECIPIENTS": ["acforgames9394@gmail.com"],
     "CACHE_FILE": "data/listings_cache.json",
     "OUTPUT_FILE": "data/listings.json",
 }
 
-log(f"篩選條件 Filter:")
-log(f"  座數 Towers: {CONFIG['TARGET_TOWERS']}")
-log(f"  房數 Rooms: {CONFIG['TARGET_ROOMS']}")  
-log(f"  面積 Size: < {CONFIG['MAX_SIZE']} sq.ft.")
+log("篩選條件 Filter:")
+log(f"  名稱需包含座號（第X座）: {CONFIG['TARGET_TOWERS']}")
 log("")
 
 # =============================================================================
@@ -85,12 +81,8 @@ def scrape_28hse():
             rooms = int(match[4])
             price = int(float(match[5]) * 10000)
             
-            # Apply filters
+            # 只限制於指定座號，其餘條件全部保留
             if tower not in CONFIG["TARGET_TOWERS"]:
-                continue
-            if size >= CONFIG["MAX_SIZE"]:
-                continue
-            if rooms not in CONFIG["TARGET_ROOMS"]:
                 continue
             
             listing = {
@@ -201,35 +193,45 @@ def send_listings_email(listings):
 # CACHE
 # =============================================================================
 
+def _listings_list_to_map(items):
+    """將列表轉成 {id: listing}，方便快取一致化。"""
+    return {
+        item["id"]: item
+        for item in items or []
+        if isinstance(item, dict) and "id" in item
+    }
+
 def load_cache():
-    """載入 cache，如果舊格式只包含 seen_ids 亦會自動轉換。"""
-    path = Path(CONFIG["CACHE_FILE"])
-    if not path.exists():
-        return {}
+    """載入 cache，如缺資料會 fallback 到 listings.json。"""
+    cache_map = {}
+    cache_path = Path(CONFIG["CACHE_FILE"])
+    output_path = Path(CONFIG["OUTPUT_FILE"])
     
-    try:
-        raw = json.loads(path.read_text())
-        listings = raw.get("listings")
-        
-        if isinstance(listings, dict):
-            return listings
-        if isinstance(listings, list):
-            # 舊版本可能是列表，轉成 {id: listing}
-            return {
-                item["id"]: item
-                for item in listings
-                if isinstance(item, dict) and "id" in item
-            }
-        
-        # 最舊版本只有 seen_ids，至少保留 ID 方便識別新盤
-        seen_ids = raw.get("seen_ids", [])
-        cache_stub = {}
-        for lid in seen_ids:
-            cache_stub[lid] = {"id": lid, "scrapedAt": raw.get("last_run")}
-        return cache_stub
-    except Exception as e:
-        log(f"⚠️ Cache 讀取失敗: {e}")
-        return {}
+    if cache_path.exists():
+        try:
+            raw = json.loads(cache_path.read_text())
+            listings = raw.get("listings")
+            if isinstance(listings, dict):
+                cache_map = listings
+            elif isinstance(listings, list):
+                cache_map = _listings_list_to_map(listings)
+            else:
+                seen_ids = raw.get("seen_ids", [])
+                cache_map = {
+                    lid: {"id": lid, "scrapedAt": raw.get("last_run")}
+                    for lid in seen_ids
+                }
+        except Exception as e:
+            log(f"⚠️ Cache 讀取失敗: {e}")
+    
+    if not cache_map and output_path.exists():
+        try:
+            data = json.loads(output_path.read_text())
+            cache_map = _listings_list_to_map(data.get("listings", []))
+        except Exception as e:
+            log(f"⚠️ listings.json fallback 亦失敗: {e}")
+    
+    return cache_map
 
 def save_data(cache_map):
     """保留 cache 並輸出網站需要的 listings.json。"""
