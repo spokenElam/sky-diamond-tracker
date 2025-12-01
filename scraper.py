@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-天鑽 The Regent - Scraper v19 (28Hse + House730 + Ricacorp Debug)
-加入 House730 作為新來源，並對利嘉閣進行連線檢測。
+天鑽 The Regent - Scraper v21 (28Hse + Squarefoot + Centaline)
+三台聯播：嘗試加入中原 (Centaline) 抓取邏輯。
 """
 
 import json
@@ -11,7 +11,6 @@ import urllib.request
 import re
 import time
 import random
-import html
 from datetime import datetime
 from pathlib import Path
 from email.mime.text import MIMEText
@@ -24,8 +23,8 @@ CONFIG = {
     "EMAIL_RECIPIENTS": ["acforgames9394@gmail.com"],
     # 網址設定
     "URL_28HSE": "https://www.28hse.com/buy/a3/dg45/c22902",
-    "URL_RICA": "https://www.ricacorp.com/zh-hk/property/list/buy/%E5%A4%A9%E9%91%BD-estate-%E5%A4%A7%E5%9F%94%E5%8D%8A%E5%B1%B1-hma-hk",
-    "URL_H730": "https://www.house730.com/buy/s/%E5%A4%A9%E9%91%BD/"
+    "URL_SQFT": "https://www.squarefoot.com.hk/buy?propertyDoSearchVersion=2.0&searchText=%E5%A4%A9%E9%91%BD&locations=&district_group_hk=&district_group_kw=&district_group_nt=&district_group_islands=&district_group_sch_pri=&district_group_sch_sec=&district_group_university=&price=&price=&mainType=&roomRange=",
+    "URL_CENTA": "https://hk.centanet.com/findproperty/list/buy/-%E5%A4%A9%E9%91%BD_2-DEPPWPPJPB"
 }
 
 def log(msg):
@@ -45,7 +44,7 @@ def get_headers():
 def fetch_url(url):
     log(f"🌍 Fetching: {url}")
     try:
-        time.sleep(random.uniform(2, 5))
+        time.sleep(random.uniform(3, 6)) # 中原需要休息更久
         req = urllib.request.Request(url, headers=get_headers())
         with urllib.request.urlopen(req, timeout=30) as resp:
             return resp.read().decode('utf-8', errors='ignore')
@@ -54,7 +53,7 @@ def fetch_url(url):
         return None
 
 # =============================================================================
-# 1. 28Hse (v14 Cleaner Version - 保持完美)
+# 1. 28Hse (v14 Cleaner)
 # =============================================================================
 def scrape_28hse():
     log("--- Scraping 28Hse ---")
@@ -68,8 +67,6 @@ def scrape_28hse():
     for chunk in chunks[1:]:
         try:
             tower = 0; floor = "??"; unit = "?"
-            
-            # 抓資料
             full_desc_match = re.search(r'unit_desc"[^>]*>\s*(.*?)\s*<', chunk)
             if full_desc_match:
                 full_text = full_desc_match.group(1)
@@ -83,7 +80,6 @@ def scrape_28hse():
             if tower == 0:
                 t_match_backup = re.search(r'(?:第|Block)?\s*(\d+)\s*座', chunk)
                 if t_match_backup: tower = int(t_match_backup.group(1))
-
             if tower == 0: continue
 
             price_match = re.search(r'(?:\$|售)\s*([\d,]+)\s*萬', chunk)
@@ -111,118 +107,107 @@ def scrape_28hse():
     return listings
 
 # =============================================================================
-# 2. House730 (New)
+# 2. Squarefoot (v20)
 # =============================================================================
-def scrape_house730():
-    log("--- Scraping House730 ---")
-    html_raw = fetch_url(CONFIG["URL_H730"])
+def scrape_squarefoot():
+    log("--- Scraping Squarefoot ---")
+    html_raw = fetch_url(CONFIG["URL_SQFT"])
     if not html_raw: return []
-    
-    # 檢查標題
-    if "Cloudflare" in html_raw or "Security" in html_raw:
-        log("🚨 House730 Blocked by Cloudflare.")
-        return []
+    if "Security" in html_raw: return []
 
     listings = []
-    # House730 結構通常係 "item-mod" 或類似
-    # 我地用通用暴力搜尋法，因為 House730 格式比較標準
-    
     clean_html = html_raw.replace('\n', ' ')
+    pattern = r'(\d+)\s*座.{0,600}?售\s*\$([\d,]+)'
+    matches = re.finditer(pattern, clean_html)
     
-    # 尋找: 天鑽...座...萬
-    # Regex: 天鑽\s*(?:第)?(\d+)座.{0,200}?\$([\d,]+)萬
-    matches = re.finditer(r'天鑽\s*(?:第)?(\d+)座.{0,200}?\$([\d,]+)萬', clean_html)
-    
-    found_count = 0
     for match in matches:
         try:
             tower = int(match.group(1))
+            if tower < 1 or tower > 20: continue 
             price = int(match.group(2).replace(',', '')) * 10000
             
-            # 抓連結 (往回找 href)
-            # 由於 regex 抓唔到 href，我地用列表頁做 link
-            link = CONFIG["URL_H730"]
+            raw_text = match.group(0)
+            floor = "??"
+            f_match = re.search(r'(低|中|高)層', raw_text)
+            if f_match: floor = f_match.group(1)
             
-            desc = f"第{tower}座 (House730)"
-            
+            link = CONFIG["URL_SQFT"]
+            desc = f"第{tower}座 (Squarefoot)"
+
             listing = {
-                "id": f"h730-{tower}-{price}",
-                "tower": tower, "floor": "??", "unit": "?",
+                "id": f"sqft-{tower}-{price}",
+                "tower": tower, "floor": floor, "unit": "?",
                 "price": price, "raw_desc": desc, "url": link,
-                "source": "hkp", # 用紫色 (借用 hkp style)
-                "sourceName": "House730",
+                "source": "hkp", "sourceName": "Squarefoot", # 紫色
                 "scrapedAt": datetime.now().isoformat()
             }
-            
             if not any(l["id"] == listing["id"] for l in listings):
                 listings.append(listing)
-                found_count += 1
-                log(f"   ✅ House730: T{tower} ${price/10000}萬")
+                log(f"   ✅ Squarefoot: T{tower} ${price/10000}萬")
         except: continue
-        
-    if found_count == 0:
-        log("⚠️ House730 found 0 items. (Maybe Regex mismatch or no listings)")
-        
     return listings
 
 # =============================================================================
-# 3. Ricacorp (Debug Mode)
+# 3. Centaline (New - 針對 Nuxt 結構)
 # =============================================================================
-def scrape_ricacorp():
-    log("--- Scraping Ricacorp (Diagnostic) ---")
-    html_raw = fetch_url(CONFIG["URL_RICA"])
+def scrape_centaline():
+    log("--- Scraping Centaline ---")
+    html_raw = fetch_url(CONFIG["URL_CENTA"])
     if not html_raw: return []
     
-    # 【DEBUG】印出標題，確認是否被 Block
-    title_match = re.search(r'<title>(.*?)</title>', html_raw, re.IGNORECASE)
-    page_title = title_match.group(1) if title_match else "Unknown"
-    log(f"   [Ricacorp Page Title]: {page_title}")
-    
-    if "Security" in page_title or "Just a moment" in page_title:
-        log("🚨 Ricacorp is serving a Challenge Page (Blocked).")
+    # 檢查是否被 Incapsula 封鎖
+    if "Incapsula" in html_raw or "Request unsuccessful" in html_raw:
+        log("🚨 Centaline Blocked (Incapsula).")
         return []
 
-    # 嘗試抓取 (如果無 Block)
     listings = []
-    clean_html = html.unescape(html_raw).replace('\n', ' ')
+    clean_html = html_raw.replace('\n', ' ')
     
-    # 嘗試極寬鬆 Regex: 數字+座 ... $數字
-    pattern = r'(\d+)\s*座.{0,1000}?\$\s*([\d,]+)'
+    # 中原列表頁通常不顯示座數，只顯示 "實用 XXX呎 ... $XXX萬"
+    # 因為網址已經 Filter 左天鑽，所以我地假設抓到既都係天鑽
+    
+    # Regex: 實用\s*(\d+)呎.{0,200}?\$\s*([\d,]+)萬
+    pattern = r'實用\s*(\d+)\s*呎.{0,200}?\$\s*([\d,]+)\s*萬'
+    
     matches = re.finditer(pattern, clean_html)
     
-    found_count = 0
     for match in matches:
         try:
-            tower = int(match.group(1))
-            # 過濾：只抓 8-19 座，避免抓到雜訊 (例如 "3座" 可能係其他野)
-            if tower < 8 or tower > 19: continue
-            
+            size = int(match.group(1))
             price = int(match.group(2).replace(',', '')) * 10000
-            if price < 4000000: continue # 避免抓到租盤 ($18,000)
+            
+            # 因為中原列表經常唔寫座數，我地設為 0，等用戶自己 Click 入去睇
+            tower = 0 
+            
+            # 嘗試找樓層 (在匹配文字附近)
+            raw_text = match.group(0)
+            floor = "??"
+            f_match = re.search(r'(低|中|高)層', raw_text) # 中原可能寫在前面，這裡盡量抓
+            if f_match: floor = f_match.group(1)
 
-            link = CONFIG["URL_RICA"]
-            desc = f"第{tower}座 (利嘉閣)"
+            # 描述
+            desc = f"天鑽 (中原盤) {size}呎"
+            link = CONFIG["URL_CENTA"]
 
             listing = {
-                "id": f"rica-{tower}-{price}",
-                "tower": tower, "floor": "??", "unit": "?",
+                "id": f"centa-{size}-{price}", # 用 呎數+價錢 做 ID
+                "tower": tower, "floor": floor, "unit": "?",
                 "price": price, "raw_desc": desc, "url": link,
                 "source": "centanet", # 橙色
-                "sourceName": "Ricacorp",
+                "sourceName": "中原",
                 "scrapedAt": datetime.now().isoformat()
             }
             
             if not any(l["id"] == listing["id"] for l in listings):
                 listings.append(listing)
-                found_count += 1
-                log(f"   ✅ Ricacorp: T{tower} ${price/10000}萬")
+                log(f"   ✅ Centaline: {size}呎 ${price/10000}萬")
         except: continue
         
     return listings
 
 # --- Main ---
 def main():
-    log("🚀 Starting Scraper v19 (Multi-Source)...")
+    log("🚀 Starting Scraper v21 (3-Sources)...")
     
     seen_ids = set()
     try:
@@ -232,13 +217,14 @@ def main():
     except: pass
 
     all_listings = []
-    all_listings.extend(scrape_28hse())
-    all_listings.extend(scrape_house730())
-    all_listings.extend(scrape_ricacorp())
+    all_listings.extend(scrape_28hse())     # 28Hse
+    all_listings.extend(scrape_squarefoot()) # Squarefoot
+    all_listings.extend(scrape_centaline())  # Centaline
     
     log(f"📊 Total Found: {len(all_listings)}")
     
-    all_listings.sort(key=lambda x: (x['tower'], x['price']))
+    # Sort: 有座數排先，無座數(0)排後
+    all_listings.sort(key=lambda x: (x['tower'] == 0, x['tower'], x['price']))
 
     # Email
     new_listings = [l for l in all_listings if l["id"] not in seen_ids]
@@ -247,10 +233,11 @@ def main():
     
     if new_listings and sender and password:
         subject = f"🔥 天鑽新盤通報 ({len(new_listings)})"
-        lines = ["最新放盤:", ""]
+        lines = ["最新放盤 (28Hse/Squarefoot/中原):", ""]
         for l in new_listings:
+            t_str = f"第 {l['tower']} 座" if l['tower'] > 0 else "天鑽 (座數未詳)"
             loc = f"{l['floor']}層 {l['unit']}室" if l['unit'] != "?" else ""
-            lines.append(f"📍 第 {l['tower']} 座 {loc} | ${l['price']/10000:,.0f}萬 | {l['sourceName']}")
+            lines.append(f"📍 {t_str} {loc} | ${l['price']/10000:,.0f}萬 | {l['sourceName']}")
             lines.append(f"   {l['url']}")
             lines.append("")
         lines.append("Dashboard: https://spokenelam.github.io/sky-diamond-tracker/")
