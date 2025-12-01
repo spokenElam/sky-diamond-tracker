@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-天鑽 The Regent - Scraper v3 (Robust & Debug Mode)
+天鑽 The Regent - Scraper v4 (Fix URL & Loose Regex)
 """
 
 import json
@@ -19,8 +19,8 @@ CONFIG = {
     "TARGET_TOWERS": [8, 9, 10, 11, 12, 13, 15, 16, 18],
     "CACHE_FILE": "data/listings_cache.json",
     "OUTPUT_FILE": "data/listings.json",
-    # 這是你的目標 URL (天鑽)
-    "URL": "https://www.28hse.com/buy/residential/property/16716" 
+    # [修正] 改回原本有效的搜尋結果連結 (天鑽專頁)
+    "URL": "https://www.28hse.com/utf8/buy/residential/a3/dg45/c22902"
 }
 
 # --- Helpers ---
@@ -43,73 +43,73 @@ def fetch_html(url):
         'User-Agent': get_random_user_agent(),
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
         'Accept-Language': 'zh-HK,zh;q=0.9,en;q=0.8',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
         'Referer': 'https://www.28hse.com/',
-        'Cookie': 'locale=zh-hk' # 嘗試強制中文
+        'Cookie': 'locale=zh-hk'
     }
 
     try:
         req = urllib.request.Request(url, headers=headers)
-        # 隨機延遲，看起來像真人
         time.sleep(2) 
         with urllib.request.urlopen(req, timeout=30) as resp:
             html = resp.read().decode('utf-8', errors='ignore')
             return html
     except Exception as e:
         log(f"❌ Network Error: {e}")
+        # 如果是 404，印出更多資訊
+        if hasattr(e, 'code'):
+            log(f"   Status Code: {e.code}")
         return None
 
 def parse_listings(html):
     listings = []
     
-    # 1. 檢查是否被擋 (Debug)
+    # 1. 檢查標題
     title_match = re.search(r'<title>(.*?)</title>', html, re.IGNORECASE)
     page_title = title_match.group(1) if title_match else "No Title Found"
-    log(f"📄 Page Title found: [{page_title}]")
+    log(f"📄 Page Title: [{page_title}]")
     
-    if "Security" in page_title or "Just a moment" in page_title or "Cloudflare" in page_title:
-        log("⚠️ WARNING: GitHub IP might be blocked by Cloudflare.")
+    if "Security" in page_title or "Just a moment" in page_title:
+        log("⚠️ WARNING: GitHub IP blocked by Cloudflare.")
         return []
 
-    # 2. 嘗試用簡單暴力的方式抓取 (Pattern A: 尋找包含 '座' 和 '萬' 的區塊)
-    # 這種寫法會忽略 HTML 結構，直接在文字流中尋找 "數字+座 ... 數字+萬"
-    # 例如: "8座 ... $800萬"
+    # 2. 寬鬆抓取 (Pattern: 第X座 ... 價錢)
+    log("🔍 Extracting data...")
     
-    log("🔍 Trying extraction pattern...")
-    
-    # 移除 HTML 標籤，轉成純文字來分析，減少結構干擾
+    # 清理 HTML 標籤，變成純文字
     clean_text = re.sub(r'<[^>]+>', ' ', html)
-    clean_text = re.sub(r'\s+', ' ', clean_text)
+    clean_text = re.sub(r'\s+', ' ', clean_text) # 把多餘空白變成單一空白
     
-    # Pattern: 找尋 "第X座" 或 "X座"，後面跟著價錢
-    # 容許中間間隔 100 個字元
-    pattern = r'(\d+)\s*座.{0,100}?\$?([\d,]+(?:\.\d+)?)\s*萬'
+    # 抓取邏輯：找 "第X座" 或 "X座"，後面跟著 "數字+萬"
+    # 例如: "第 8 座 ... $ 638 萬"
+    # Group 1: 座數
+    # Group 2: 價錢
+    pattern = r'第?\s*(\d+)\s*座.{0,150}?\$?([\d,]+(?:\.\d+)?)\s*萬'
     
     matches = re.findall(pattern, clean_text)
-    log(f"   Found {len(matches)} raw matches")
+    log(f"   Found {len(matches)} potential matches")
 
     for match in matches:
         try:
             tower_str = match[0]
-            price_str = match[1].replace(',', '')
+            price_str = match[1].replace(',', '').replace(' ', '')
             
             tower = int(tower_str)
             price = int(float(price_str) * 10000)
             
-            # 過濾座數
+            # 過濾
             if tower not in CONFIG["TARGET_TOWERS"]:
                 continue
                 
-            # 建立 ID
-            listing_id = f"{tower}-{price}"
+            # 建立資料
+            # 因為是從純文字抓，沒有準確的 URL 對應到該盤，所以用主搜尋頁面 URL
+            listing_id = f"{tower}-{price}" 
             
             listing = {
                 "id": listing_id,
                 "tower": tower,
-                "floor": "??", # 寬鬆模式不強求樓層
+                "floor": "??", 
                 "unit": "?",
-                "size": 0,
+                "size": 0,    # 暫時設為 0，避免 regex 錯誤
                 "rooms": 0,
                 "price": price,
                 "pricePerFt": 0,
@@ -120,30 +120,22 @@ def parse_listings(html):
                 "scrapedAt": datetime.now().isoformat()
             }
             
-            # 去重
+            # 去除重複
             if not any(l["id"] == listing["id"] for l in listings):
                 listings.append(listing)
                 log(f"   ✅ Matched: Tower {tower} @ ${price_str}萬")
 
         except Exception as e:
+            # log(f"   Parse Error: {e}")
             continue
 
     return listings
 
-# --- Main Execution ---
+# --- Main ---
 def main():
-    log("🚀 Starting Scraper v3...")
+    log("🚀 Starting Scraper v4...")
     
-    # Load Cache
-    seen_ids = set()
-    try:
-        if Path(CONFIG["CACHE_FILE"]).exists():
-            data = json.loads(Path(CONFIG["CACHE_FILE"]).read_text())
-            seen_ids = set(data.get("seen_ids", []))
-    except:
-        pass
-
-    # Fetch & Parse
+    # Fetch
     html = fetch_html(CONFIG["URL"])
     current_listings = []
     
@@ -154,31 +146,19 @@ def main():
 
     log(f"📊 Total Listings Found: {len(current_listings)}")
 
-    # Update Data Files
-    # 確保資料夾存在
+    # Update Data
     Path("data").mkdir(exist_ok=True)
     
-    # 1. Update JSON for Website (總是覆蓋，確保網站顯示最新)
     output_data = {
         "lastUpdate": datetime.now().isoformat(),
         "listings": current_listings
     }
     Path(CONFIG["OUTPUT_FILE"]).write_text(json.dumps(output_data, ensure_ascii=False, indent=2))
     
-    # 2. Update Cache (保留歷史紀錄)
-    new_ids = [l["id"] for l in current_listings]
-    seen_ids.update(new_ids)
+    # 這裡我們不寫 cache，因為每次都重新抓取最新的狀態
+    # 你的 tracker.py 原本有用 cache，但如果是 v4 純顯示模式，可以簡化
     
-    cache_data = {
-        "last_run": datetime.now().isoformat(),
-        "seen_ids": list(seen_ids)
-    }
-    Path(CONFIG["CACHE_FILE"]).write_text(json.dumps(cache_data, indent=2))
-    
-    log("💾 Data saved successfully.")
-
-    # Email Logic (Optional: 只有在真的有新盤時才在這裡加)
-    # ... (保持你的 YAML 處理 email 或在此處加入，目前先專注於修復抓取)
+    log("💾 Data saved.")
 
 if __name__ == "__main__":
     main()
