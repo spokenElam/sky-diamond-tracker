@@ -3,6 +3,7 @@
 天鑽 The Regent - Property Listing Tracker
 """
 
+import argparse
 import json
 import smtplib
 import os
@@ -201,25 +202,55 @@ def send_listings_email(listings):
 # =============================================================================
 
 def load_cache():
-    try:
-        path = Path(CONFIG["CACHE_FILE"])
-        if path.exists():
-            return set(json.loads(path.read_text()).get("seen_ids", []))
-    except:
-        pass
-    return set()
-
-def save_data(seen_ids, listings):
-    Path("data").mkdir(exist_ok=True)
+    """載入 cache，如果舊格式只包含 seen_ids 亦會自動轉換。"""
+    path = Path(CONFIG["CACHE_FILE"])
+    if not path.exists():
+        return {}
     
-    Path(CONFIG["CACHE_FILE"]).write_text(json.dumps({
-        "last_run": datetime.now().isoformat(),
-        "seen_ids": list(seen_ids)
-    }, indent=2))
+    try:
+        raw = json.loads(path.read_text())
+        listings = raw.get("listings")
+        
+        if isinstance(listings, dict):
+            return listings
+        if isinstance(listings, list):
+            # 舊版本可能是列表，轉成 {id: listing}
+            return {
+                item["id"]: item
+                for item in listings
+                if isinstance(item, dict) and "id" in item
+            }
+        
+        # 最舊版本只有 seen_ids，至少保留 ID 方便識別新盤
+        seen_ids = raw.get("seen_ids", [])
+        cache_stub = {}
+        for lid in seen_ids:
+            cache_stub[lid] = {"id": lid, "scrapedAt": raw.get("last_run")}
+        return cache_stub
+    except Exception as e:
+        log(f"⚠️ Cache 讀取失敗: {e}")
+        return {}
+
+def save_data(cache_map):
+    """保留 cache 並輸出網站需要的 listings.json。"""
+    Path("data").mkdir(exist_ok=True)
+    timestamp = datetime.now().isoformat()
+    
+    cache_payload = {
+        "last_run": timestamp,
+        "seen_ids": list(cache_map.keys()),
+        "listings": cache_map
+    }
+    Path(CONFIG["CACHE_FILE"]).write_text(json.dumps(cache_payload, ensure_ascii=False, indent=2))
+    
+    def sort_key(item):
+        return item.get("lastSeenAt") or item.get("scrapedAt") or ""
+    
+    sorted_listings = sorted(cache_map.values(), key=sort_key, reverse=True)
     
     Path(CONFIG["OUTPUT_FILE"]).write_text(json.dumps({
-        "lastUpdate": datetime.now().isoformat(),
-        "listings": listings
+        "lastUpdate": timestamp,
+        "listings": sorted_listings
     }, ensure_ascii=False, indent=2))
     
     log("💾 Data saved")
@@ -230,8 +261,8 @@ def save_data(seen_ids, listings):
 
 def main():
     try:
-        seen_ids = load_cache()
-        log(f"Cache: {len(seen_ids)} seen")
+        cache_map = load_cache()
+        log(f"Cache: {len(cache_map)} seen")
         log("")
         
         # Scrape
@@ -240,23 +271,37 @@ def main():
         log(f"📊 Total: {len(listings)} matching listings")
         
         # New listings
-        new_listings = [l for l in listings if l["id"] not in seen_ids]
+        new_listings = []
+        now_iso = datetime.now().isoformat()
+        
+        for listing in listings:
+            listing_id = listing["id"]
+            existing = cache_map.get(listing_id)
+            
+            if existing:
+                first_seen = existing.get("firstSeenAt") or existing.get("scrapedAt")
+                if first_seen:
+                    listing["scrapedAt"] = first_seen
+                    listing["firstSeenAt"] = first_seen
+            else:
+                listing["firstSeenAt"] = listing["scrapedAt"]
+                new_listings.append(listing)
+            
+            listing["lastSeenAt"] = now_iso
+            cache_map[listing_id] = listing
+        
         log(f"🆕 New: {len(new_listings)}")
         log("")
-        
-        # Update cache
-        for l in listings:
-            seen_ids.add(l["id"])
         
         # Email
         if new_listings:
             log("📧 Sending new listings email...")
             send_listings_email(new_listings)
         else:
-            send_test_email()
+            log("📭 No new listings. Skip email.")
         
         log("")
-        save_data(seen_ids, listings)
+        save_data(cache_map)
         
         log("")
         log("=" * 60)
@@ -268,5 +313,14 @@ def main():
         traceback.print_exc()
         sys.exit(1)
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="天鑽自動放盤監控")
+    parser.add_argument("--test-email", action="store_true", help="只發送測試電郵")
+    return parser.parse_args()
+
 if __name__ == "__main__":
+    args = parse_args()
+    if args.test_email:
+        success = send_test_email()
+        sys.exit(0 if success else 1)
     main()
