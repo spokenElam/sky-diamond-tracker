@@ -1,5 +1,5 @@
 {
-  "lastUpdate": "2025-12-01T14:39:22.531539",
+  "lastUpdate": "2025-12-01T16:21:41.767141",
   "listings": [
     {
       "id": "28hse-8-4600000",
@@ -11,7 +11,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3633564",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-01T14:39:15.149182"
+      "scrapedAt": "2025-12-01T16:21:30.499910"
     },
     {
       "id": "28hse-8-5900000",
@@ -23,7 +23,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3640202",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-01T14:39:15.148767"
+      "scrapedAt": "2025-12-01T16:21:30.499480"
     },
     {
       "id": "28hse-8-5980000",
@@ -35,7 +35,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3656049",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-01T14:39:15.148151"
+      "scrapedAt": "2025-12-01T16:21:30.498887"
     },
     {
       "id": "28hse-8-5990000",
@@ -47,7 +47,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3632866",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-01T14:39:15.149748"
+      "scrapedAt": "2025-12-01T16:21:30.500516"
     },
     {
       "id": "28hse-8-6000000",
@@ -59,7 +59,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3641339",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-01T14:39:15.148613"
+      "scrapedAt": "2025-12-01T16:21:30.499333"
     },
     {
       "id": "28hse-9-8380000",
@@ -71,7 +71,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3656389",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-01T14:39:15.147898"
+      "scrapedAt": "2025-12-01T16:21:30.498621"
     },
     {
       "id": "28hse-10-4600000",
@@ -83,7 +83,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3633082",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-01T14:39:15.149334"
+      "scrapedAt": "2025-12-01T16:21:30.500060"
     },
     {
       "id": "28hse-10-5980000",
@@ -95,7 +95,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3634317",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-01T14:39:15.148907"
+      "scrapedAt": "2025-12-01T16:21:30.499627"
     },
     {
       "id": "28hse-10-6000000",
@@ -107,7 +107,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3658024",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-01T14:39:15.147762"
+      "scrapedAt": "2025-12-01T16:21:30.498488"
     },
     {
       "id": "28hse-13-5780000",
@@ -119,7 +119,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3245278",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-01T14:39:15.148018"
+      "scrapedAt": "2025-12-01T16:21:30.498751"
     },
     {
       "id": "28hse-15-8500000",
@@ -131,7 +131,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3634011",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-01T14:39:15.149052"
+      "scrapedAt": "2025-12-01T16:21:30.499773"
     },
     {
       "id": "28hse-19-7180000",
@@ -143,7 +143,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3651874",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-01T14:39:15.148292"
+      "scrapedAt": "2025-12-01T16:21:30.499024"
     },
     {
       "id": "28hse-19-7280000",
@@ -155,7 +155,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3651540",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-01T14:39:15.148428"
+      "scrapedAt": "2025-12-01T16:21:30.499192"
     }
   ]
 }
