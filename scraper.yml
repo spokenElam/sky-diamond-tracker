@@ -1,0 +1,46 @@
+name: Sky Diamond Tracker 天鑽放盤監控
+
+on:
+  # Run every 2 hours 每2小時運行
+  schedule:
+    - cron: '0 */2 * * *'
+  
+  # Allow manual trigger 允許手動觸發
+  workflow_dispatch:
+  
+  # Run on push to main 推送時運行
+  push:
+    branches: [main]
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Create data directory
+        run: mkdir -p data
+      
+      - name: Run scraper
+        env:
+          EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+        run: python scraper.py
+      
+      - name: Commit and push data
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data/
+          git diff --staged --quiet || git commit -m "Update listings data $(date +'%Y-%m-%d %H:%M')"
+          git push
