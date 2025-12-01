@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 天鑽 The Regent - Property Listing Tracker
+Updated: Loose Filter (Tower Name Only)
 """
 
-import argparse
 import json
 import smtplib
 import os
@@ -25,15 +25,18 @@ log(f"時間 Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 log("=" * 60)
 log("")
 
+# 配置：只保留座數設定，移除面積/房數限制
 CONFIG = {
+    # 篩選名字有 8,9, 10, 11, 12, 13, 15, 16, 18
     "TARGET_TOWERS": [8, 9, 10, 11, 12, 13, 15, 16, 18],
     "EMAIL_RECIPIENTS": ["acforgames9394@gmail.com"],
     "CACHE_FILE": "data/listings_cache.json",
     "OUTPUT_FILE": "data/listings.json",
 }
 
-log("篩選條件 Filter:")
-log(f"  名稱需包含座號（第X座）: {CONFIG['TARGET_TOWERS']}")
+log(f"篩選條件 Filter:")
+log(f"  目標座數 Towers: {CONFIG['TARGET_TOWERS']}")
+log(f"  其他條件: 無 (只要名稱含座號即抓取)")
 log("")
 
 # =============================================================================
@@ -67,48 +70,76 @@ def scrape_28hse():
     
     listings = []
     
-    # Pattern: 第X座 + 樓層 + 室 + 呎數 + 房數 + 價錢
-    pattern = r'第(\d+)座[^第]*?(\d+|高|中|低)[樓層][^第]*?([A-H])室[^第]*?(\d{3,4})[呎尺][^第]*?(\d)[房室][^第]*?([\d\.]+)萬'
+    # Updated Regex: 寬鬆模式
+    # 只要抓到 "第X座" ... 直到看到 "萬" (價錢)
+    # Group 1: 座數
+    # Group 2: 中間的描述 (樓層/室/呎數/房) - 全部當作文字存起來
+    # Group 3: 價錢
+    pattern = r'第\s*(\d+)\s*座(.*?)([\d\.]+)萬'
     
     matches = re.findall(pattern, html, re.IGNORECASE | re.DOTALL)
     
     for match in matches:
         try:
-            tower = int(match[0])
-            floor = match[1]
-            unit = match[2].upper()
-            size = int(match[3])
-            rooms = int(match[4])
-            price = int(float(match[5]) * 10000)
+            tower_str = match[0]
+            description = match[1].strip() # 中間的雜訊或描述
+            price_str = match[2]
             
-            # 只限制於指定座號，其餘條件全部保留
+            tower = int(tower_str)
+            price = int(float(price_str) * 10000)
+            
+            # Filter 1: 只檢查座數
             if tower not in CONFIG["TARGET_TOWERS"]:
                 continue
             
+            # 清理 Description 讓顯示好看一點 (移除多餘換行或標籤)
+            clean_desc = re.sub(r'<[^>]+>', ' ', description) # 去除 HTML tags
+            clean_desc = re.sub(r'\s+', ' ', clean_desc).strip() # 去除多餘空白
+            
+            # 嘗試從 Description 提取更多資訊 (僅供顯示，不過濾)
+            # 找呎數 (例如 495呎)
+            size_match = re.search(r'(\d{3,4})\s*[呎尺]', clean_desc)
+            size = int(size_match.group(1)) if size_match else 0
+            
+            # 找房數
+            rooms_match = re.search(r'(\d)\s*[房室]', clean_desc)
+            rooms = int(rooms_match.group(1)) if rooms_match else 0
+            
+            # 找樓層/室 (簡單抓)
+            floor_match = re.search(r'(高|中|低|[0-9]+)[樓層]', clean_desc)
+            floor = floor_match.group(1) if floor_match else "??"
+            
+            unit_match = re.search(r'([A-H])室', clean_desc, re.IGNORECASE)
+            unit = unit_match.group(1).upper() if unit_match else "?"
+
+            # 建立 ID (用 座數+價錢+描述 hash 避免重複)
+            # 因為現在沒有嚴格的 Unit/Floor，用內容特徵做 ID
+            unique_str = f"{tower}-{price}-{clean_desc[:20]}"
+            listing_id = str(hash(unique_str))[-10:] # 簡單的 Hash ID
+
             listing = {
-                "id": f"{tower}-{floor}-{unit}",
+                "id": listing_id, # 或是用原本的組合
                 "tower": tower,
                 "floor": floor,
                 "unit": unit,
                 "size": size,
                 "rooms": rooms,
                 "price": price,
-                "pricePerFt": price // size if size > 0 else 0,
-                "source": "28hse",
-                "sourceName": "28Hse",
-                "sourceNameEn": "28Hse",
+                "raw_desc": clean_desc, # 保留原始描述方便查看
                 "url": url,
                 "scrapedAt": datetime.now().isoformat()
             }
             
+            # 避免同一輪重複 (有些網頁會有重複區塊)
             if not any(l["id"] == listing["id"] for l in listings):
                 listings.append(listing)
-                log(f"  📍 第{tower}座 {floor}樓 {unit}室 | {size}呎 {rooms}房 | ${price:,}")
+                log(f"  📍 第{tower}座 | ${price_str}萬 | {clean_desc[:30]}...")
                 
-        except:
+        except Exception as e:
+            # log(f"Parsing error: {e}") # Debug use
             continue
     
-    log(f"  Found: {len(listings)} listings")
+    log(f"  Found: {len(listings)} matching listings")
     return listings
 
 # =============================================================================
@@ -120,7 +151,7 @@ def send_email(subject, body):
     password = os.environ.get("EMAIL_PASSWORD", "").strip()
     
     if not sender or not password:
-        log("⚠️ Email not configured")
+        log("⚠️ Email not configured (Env vars missing)")
         return False
     
     try:
@@ -136,200 +167,106 @@ def send_email(subject, body):
         
         log("✅ Email sent!")
         return True
-        
-    except smtplib.SMTPAuthenticationError:
-        log("❌ Email AUTHENTICATION FAILED")
-        log("   App Password must be 16 chars, no spaces")
-        return False
     except Exception as e:
         log(f"❌ Email error: {e}")
         return False
 
 def send_test_email():
-    log("=" * 60)
-    log("EMAIL TEST")
-    log("=" * 60)
-    
-    sender = os.environ.get("EMAIL_SENDER", "").strip()
-    password = os.environ.get("EMAIL_PASSWORD", "").strip()
-    
-    log(f"EMAIL_SENDER: {sender if sender else '❌ NOT SET'}")
-    log(f"EMAIL_PASSWORD: {len(password)} chars" if password else "❌ NOT SET")
-    
-    if password and len(password) != 16:
-        log(f"⚠️ Password is {len(password)} chars, should be 16!")
-    
-    subject = f"🏠 天鑽測試 Test - {datetime.now().strftime('%m/%d %H:%M')}"
-    body = f"""
-天鑽 The Regent - 測試成功！Test OK!
-
-✅ Email 正常運作！
-
-Dashboard: https://spokenelam.github.io/sky-diamond-tracker/
-
-{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-"""
+    subject = f"🔔 天鑽 Tracker 啟動測試 - {datetime.now().strftime('%H:%M')}"
+    body = "系統運作中。目前沒有偵測到「新」盤，但已更新網站上的現有盤資料。"
     return send_email(subject, body)
 
-def send_listings_email(listings):
-    if not listings:
+def send_listings_email(new_listings, total_count):
+    if not new_listings:
         return
     
-    subject = f"🏠 天鑽新放盤 ({len(listings)}) - {datetime.now().strftime('%m/%d %H:%M')}"
+    subject = f"🏠 天鑽新放盤 ({len(new_listings)}) - {datetime.now().strftime('%m/%d %H:%M')}"
     
-    lines = ["天鑽 The Regent - 新放盤!", "", f"發現 {len(listings)} 個:", ""]
+    lines = [
+        f"天鑽 The Regent - 發現 {len(new_listings)} 個新放盤",
+        f"(目前網站共有 {total_count} 個符合座數的放盤)",
+        "", 
+        "----------------------------------------"
+    ]
     
-    for i, l in enumerate(listings, 1):
-        lines.append(f"【{i}】第{l['tower']}座 {l['floor']}樓 {l['unit']}室")
-        lines.append(f"    {l['size']}呎 | {l['rooms']}房 | ${l['price']:,}")
-        lines.append(f"    {l['url']}")
-        lines.append("")
+    for i, l in enumerate(new_listings, 1):
+        price_show = f"${l['price']/10000:,.1f}萬"
+        lines.append(f"【{i}】第 {l['tower']} 座 (HK {price_show})")
+        lines.append(f"    描述: {l['raw_desc']}")
+        lines.append(f"    連結: {l['url']}")
+        lines.append("----------------------------------------")
     
-    lines.append("Dashboard: https://spokenelam.github.io/sky-diamond-tracker/")
+    lines.append("")
+    lines.append("完整列表 Dashboard: https://spokenelam.github.io/sky-diamond-tracker/")
     
     send_email(subject, "\n".join(lines))
 
 # =============================================================================
-# CACHE
+# CACHE & MAIN
 # =============================================================================
-
-def _listings_list_to_map(items):
-    """將列表轉成 {id: listing}，方便快取一致化。"""
-    return {
-        item["id"]: item
-        for item in items or []
-        if isinstance(item, dict) and "id" in item
-    }
 
 def load_cache():
-    """載入 cache，如缺資料會 fallback 到 listings.json。"""
-    cache_map = {}
-    cache_path = Path(CONFIG["CACHE_FILE"])
-    output_path = Path(CONFIG["OUTPUT_FILE"])
-    
-    if cache_path.exists():
-        try:
-            raw = json.loads(cache_path.read_text())
-            listings = raw.get("listings")
-            if isinstance(listings, dict):
-                cache_map = listings
-            elif isinstance(listings, list):
-                cache_map = _listings_list_to_map(listings)
-            else:
-                seen_ids = raw.get("seen_ids", [])
-                cache_map = {
-                    lid: {"id": lid, "scrapedAt": raw.get("last_run")}
-                    for lid in seen_ids
-                }
-        except Exception as e:
-            log(f"⚠️ Cache 讀取失敗: {e}")
-    
-    if not cache_map and output_path.exists():
-        try:
-            data = json.loads(output_path.read_text())
-            cache_map = _listings_list_to_map(data.get("listings", []))
-        except Exception as e:
-            log(f"⚠️ listings.json fallback 亦失敗: {e}")
-    
-    return cache_map
+    try:
+        path = Path(CONFIG["CACHE_FILE"])
+        if path.exists():
+            data = json.loads(path.read_text())
+            return set(data.get("seen_ids", []))
+    except:
+        pass
+    return set()
 
-def save_data(cache_map):
-    """保留 cache 並輸出網站需要的 listings.json。"""
+def save_data(seen_ids, listings):
     Path("data").mkdir(exist_ok=True)
-    timestamp = datetime.now().isoformat()
     
-    cache_payload = {
-        "last_run": timestamp,
-        "seen_ids": list(cache_map.keys()),
-        "listings": cache_map
-    }
-    Path(CONFIG["CACHE_FILE"]).write_text(json.dumps(cache_payload, ensure_ascii=False, indent=2))
+    # Cache File: 記錄看過的 ID
+    Path(CONFIG["CACHE_FILE"]).write_text(json.dumps({
+        "last_run": datetime.now().isoformat(),
+        "seen_ids": list(seen_ids)
+    }, indent=2))
     
-    def sort_key(item):
-        return item.get("lastSeenAt") or item.get("scrapedAt") or ""
-    
-    sorted_listings = sorted(cache_map.values(), key=sort_key, reverse=True)
-    
+    # Output File (For Website): 儲存「所有」抓到的盤，讓網站顯示目前狀況
     Path(CONFIG["OUTPUT_FILE"]).write_text(json.dumps({
-        "lastUpdate": timestamp,
-        "listings": sorted_listings
+        "lastUpdate": datetime.now().isoformat(),
+        "listings": listings
     }, ensure_ascii=False, indent=2))
     
-    log("💾 Data saved")
-
-# =============================================================================
-# MAIN
-# =============================================================================
+    log("💾 Website Data & Cache saved")
 
 def main():
     try:
-        cache_map = load_cache()
-        log(f"Cache: {len(cache_map)} seen")
-        log("")
+        seen_ids = load_cache()
+        log(f"Cache: {len(seen_ids)} previously seen IDs")
         
-        # Scrape
+        # 1. 抓取所有符合座數的盤 (不論新舊)
         listings = scrape_28hse()
-        log("")
-        log(f"📊 Total: {len(listings)} matching listings")
         
-        # New listings
-        new_listings = []
-        now_iso = datetime.now().isoformat()
+        # 2. 找出哪些是「新」的 (不在 Cache 裡)
+        new_listings = [l for l in listings if l["id"] not in seen_ids]
+        log(f"🆕 New Listings Found: {len(new_listings)}")
         
-        for listing in listings:
-            listing_id = listing["id"]
-            existing = cache_map.get(listing_id)
-            
-            if existing:
-                first_seen = existing.get("firstSeenAt") or existing.get("scrapedAt")
-                if first_seen:
-                    listing["scrapedAt"] = first_seen
-                    listing["firstSeenAt"] = first_seen
-            else:
-                listing["firstSeenAt"] = listing["scrapedAt"]
-                new_listings.append(listing)
-            
-            listing["lastSeenAt"] = now_iso
-            cache_map[listing_id] = listing
+        # 3. 更新 Cache ID 列表 (將這次抓到的所有 ID 都加入 Cache，防止下次重複寄)
+        current_ids = set(seen_ids)
+        for l in listings:
+            current_ids.add(l["id"])
         
-        log(f"🆕 New: {len(new_listings)}")
-        log("")
-        
-        # Email
+        # 4. 寄 Email 邏輯
         if new_listings:
-            log("📧 Sending new listings email...")
-            send_listings_email(new_listings)
+            log("📧 Sending notification for NEW listings...")
+            send_listings_email(new_listings, len(listings))
         else:
-            log("📭 No new listings. Skip email.")
+            log("💤 No new listings. Skipping email.")
+            # 如果你想在完全沒新盤時也收到測試信，可以取消下面這行的註解：
+            # send_test_email() 
         
-        log("")
-        save_data(cache_map)
+        # 5. 存檔 (包含舊盤，確保網站顯示所有資料)
+        save_data(current_ids, listings)
         
-        log("")
-        log("=" * 60)
         log("✅ Done!")
-        log("=" * 60)
         
     except Exception as e:
         log(f"❌ ERROR: {e}")
         traceback.print_exc()
         sys.exit(1)
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="天鑽自動放盤監控")
-    parser.add_argument("--test-email", action="store_true", help="只發送測試電郵")
-    return parser.parse_args()
-
 if __name__ == "__main__":
-    args = parse_args()
-    if args.test_email:
-        success = send_test_email()
-        sys.exit(0 if success else 1)
     main()
-        <div class="criteria">
-            <div class="criteria-title">篩選條件 Filter Criteria</div>
-            <div class="criteria-tags">
-                <span class="tag highlight">🏢 只顯示第8 / 9 / 10 / 11 / 12 / 13 / 15 / 16 / 18座</span>
-                <span class="tag">🔍 其他條件全部保留（面積、房數不限）</span>
-            </div>
-        </div>
