@@ -1,199 +1,184 @@
 #!/usr/bin/env python3
 """
-天鑽 The Regent - Scraper v14 (Clean Data + Floor/Unit Parsing)
-整靚資料版：嘗試提取樓層室號，並清理描述垃圾字
+天鑽 The Regent - Scraper v3 (Robust & Debug Mode)
 """
 
 import json
 import os
-import smtplib
+import sys
+import traceback
 import urllib.request
 import re
+import random
 import time
 from datetime import datetime
 from pathlib import Path
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 
 # --- Configuration ---
 CONFIG = {
+    "TARGET_TOWERS": [8, 9, 10, 11, 12, 13, 15, 16, 18],
     "CACHE_FILE": "data/listings_cache.json",
     "OUTPUT_FILE": "data/listings.json",
-    "URL": "https://www.28hse.com/buy/a3/dg45/c22902",
-    "EMAIL_RECIPIENTS": ["acforgames9394@gmail.com"] 
+    # 這是你的目標 URL (天鑽)
+    "URL": "https://www.28hse.com/buy/residential/property/16716" 
 }
 
+# --- Helpers ---
 def log(msg):
     print(msg, flush=True)
 
-def fetch_url(url):
-    log(f"🌍 Fetching: {url}")
+def get_random_user_agent():
+    agents = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0'
+    ]
+    return random.choice(agents)
+
+# --- Scraper Logic ---
+def fetch_html(url):
+    log(f"🌍 Fetching URL: {url}")
+    
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/121.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml',
-        'Cookie': 'locale=zh-hk'
+        'User-Agent': get_random_user_agent(),
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'zh-HK,zh;q=0.9,en;q=0.8',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Referer': 'https://www.28hse.com/',
+        'Cookie': 'locale=zh-hk' # 嘗試強制中文
     }
+
     try:
-        time.sleep(2)
         req = urllib.request.Request(url, headers=headers)
+        # 隨機延遲，看起來像真人
+        time.sleep(2) 
         with urllib.request.urlopen(req, timeout=30) as resp:
-            return resp.read().decode('utf-8', errors='ignore')
+            html = resp.read().decode('utf-8', errors='ignore')
+            return html
     except Exception as e:
-        log(f"❌ Fetch error: {e}")
+        log(f"❌ Network Error: {e}")
         return None
 
-def scrape_28hse():
-    log("--- Scraping 28Hse (Cleaner Data) ---")
-    html = fetch_url(CONFIG["URL"])
-    if not html: return []
-
-    if "Security Check" in html or "Just a moment" in html:
-        log("🚨 Blocked by Cloudflare.")
+def parse_listings(html):
+    listings = []
+    
+    # 1. 檢查是否被擋 (Debug)
+    title_match = re.search(r'<title>(.*?)</title>', html, re.IGNORECASE)
+    page_title = title_match.group(1) if title_match else "No Title Found"
+    log(f"📄 Page Title found: [{page_title}]")
+    
+    if "Security" in page_title or "Just a moment" in page_title or "Cloudflare" in page_title:
+        log("⚠️ WARNING: GitHub IP might be blocked by Cloudflare.")
         return []
 
-    listings = []
-    chunks = re.split(r'class="item', html)
+    # 2. 嘗試用簡單暴力的方式抓取 (Pattern A: 尋找包含 '座' 和 '萬' 的區塊)
+    # 這種寫法會忽略 HTML 結構，直接在文字流中尋找 "數字+座 ... 數字+萬"
+    # 例如: "8座 ... $800萬"
     
-    for chunk in chunks[1:]:
+    log("🔍 Trying extraction pattern...")
+    
+    # 移除 HTML 標籤，轉成純文字來分析，減少結構干擾
+    clean_text = re.sub(r'<[^>]+>', ' ', html)
+    clean_text = re.sub(r'\s+', ' ', clean_text)
+    
+    # Pattern: 找尋 "第X座" 或 "X座"，後面跟著價錢
+    # 容許中間間隔 100 個字元
+    pattern = r'(\d+)\s*座.{0,100}?\$?([\d,]+(?:\.\d+)?)\s*萬'
+    
+    matches = re.findall(pattern, clean_text)
+    log(f"   Found {len(matches)} raw matches")
+
+    for match in matches:
         try:
-            # --- 1. 抓取座數、樓層、室號 ---
-            tower = 0
-            floor = "??"
-            unit = "?"
+            tower_str = match[0]
+            price_str = match[1].replace(',', '')
             
-            # 針對 unit_desc 抓取完整字串 (e.g. "13座 低層 C室")
-            full_desc_match = re.search(r'unit_desc"[^>]*>\s*(.*?)\s*<', chunk)
+            tower = int(tower_str)
+            price = int(float(price_str) * 10000)
             
-            if full_desc_match:
-                full_text = full_desc_match.group(1) # "13座 低層 C室"
+            # 過濾座數
+            if tower not in CONFIG["TARGET_TOWERS"]:
+                continue
                 
-                # 抓座數
-                t_match = re.search(r'(\d+)\s*座', full_text)
-                if t_match: tower = int(t_match.group(1))
-                
-                # 抓樓層 (低層/中層/高層)
-                f_match = re.search(r'(低|中|高)層', full_text)
-                if f_match: floor = f_match.group(1)
-                
-                # 抓室號 (A-H室)
-                u_match = re.search(r'([A-H])室', full_text, re.IGNORECASE)
-                if u_match: unit = u_match.group(1).upper()
+            # 建立 ID
+            listing_id = f"{tower}-{price}"
             
-            # 如果上面失敗，用後備方法抓座數
-            if tower == 0:
-                t_match_backup = re.search(r'(?:第|Block)?\s*(\d+)\s*座', chunk)
-                if t_match_backup: tower = int(t_match_backup.group(1))
-
-            if tower == 0: continue # 搵唔到座數就 Skip
-
-            # --- 2. 抓價錢 ---
-            price_match = re.search(r'(?:\$|售)\s*([\d,]+)\s*萬', chunk)
-            if not price_match: continue
-            price = int(price_match.group(1).replace(',', '')) * 10000
-
-            # --- 3. 抓描述 (清理垃圾字) ---
-            # 移除 HTML tag
-            clean_text = re.sub(r'<[^>]+>', ' ', chunk)
-            # 移除常見垃圾字
-            clean_text = clean_text.replace('property_item', '').replace('"', '').replace('>', '')
-            # 移除多餘空白
-            clean_text = re.sub(r'\s+', ' ', clean_text).strip()
-            # 描述只取重點 (跳過前面果堆數字)
-            desc = clean_text[10:60] + "..." 
-
-            # --- 4. 抓連結 ---
-            link_match = re.search(r'href="([^"]+)"', chunk)
-            link = link_match.group(1) if link_match else CONFIG["URL"]
-
             listing = {
-                "id": f"28hse-{tower}-{price}",
+                "id": listing_id,
                 "tower": tower,
-                "floor": floor, # 現在應該會有 "低/中/高"
-                "unit": unit,   # 現在應該會有 "C", "D" 等
-                "rooms": 0,     # 暫時不抓房數，避免太複雜出錯
+                "floor": "??", # 寬鬆模式不強求樓層
+                "unit": "?",
                 "size": 0,
+                "rooms": 0,
                 "price": price,
                 "pricePerFt": 0,
-                "raw_desc": desc,
-                "url": link,
-                "source": "hse28",
+                "raw_desc": f"第{tower}座 (HK${price_str}萬)",
+                "url": CONFIG["URL"],
+                "source": "28hse",
                 "sourceName": "28Hse",
                 "scrapedAt": datetime.now().isoformat()
             }
             
+            # 去重
             if not any(l["id"] == listing["id"] for l in listings):
                 listings.append(listing)
-                log(f"   ✅ Found: T{tower} {floor} {unit}室 ${price/10000}萬")
+                log(f"   ✅ Matched: Tower {tower} @ ${price_str}萬")
 
-        except: continue
-            
+        except Exception as e:
+            continue
+
     return listings
 
-# --- Email ---
-def send_email(new_listings):
-    sender = os.environ.get("EMAIL_SENDER")
-    password = os.environ.get("EMAIL_PASSWORD")
-    if not sender or not password: return
-
-    subject = f"🔥 天鑽新盤通報 ({len(new_listings)})"
-    lines = ["最新放盤:", ""]
-    for l in new_listings:
-        # Email 內容都整靚仔啲
-        loc = f"{l['floor']}層 {l['unit']}室" if l['unit'] != "?" else ""
-        lines.append(f"📍 第 {l['tower']} 座 {loc} | ${l['price']/10000:,.0f}萬")
-        lines.append(f"   {l['url']}")
-        lines.append("")
-    lines.append("Dashboard: https://spokenelam.github.io/sky-diamond-tracker/")
-    
-    msg = MIMEMultipart()
-    msg['From'] = sender
-    msg['To'] = ", ".join(CONFIG["EMAIL_RECIPIENTS"])
-    msg['Subject'] = subject
-    msg.attach(MIMEText("\n".join(lines), 'plain', 'utf-8'))
-
-    try:
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(sender, password)
-            server.sendmail(sender, CONFIG["EMAIL_RECIPIENTS"], msg.as_string())
-        log("📧 Email sent.")
-    except: pass
-
-# --- Main ---
+# --- Main Execution ---
 def main():
-    log("🚀 Starting Scraper v14 (Cleaner)...")
+    log("🚀 Starting Scraper v3...")
     
-    # Cache Logic
+    # Load Cache
     seen_ids = set()
     try:
         if Path(CONFIG["CACHE_FILE"]).exists():
             data = json.loads(Path(CONFIG["CACHE_FILE"]).read_text())
             seen_ids = set(data.get("seen_ids", []))
-    except: pass
+    except:
+        pass
 
-    current_listings = scrape_28hse()
-    log(f"📊 Total Found: {len(current_listings)}")
+    # Fetch & Parse
+    html = fetch_html(CONFIG["URL"])
+    current_listings = []
     
-    # Sort by Tower then Price
-    current_listings.sort(key=lambda x: (x['tower'], x['price']))
+    if html:
+        current_listings = parse_listings(html)
+    else:
+        log("❌ No HTML content retrieved.")
 
-    new_listings = [l for l in current_listings if l["id"] not in seen_ids]
-    
-    # Update Cache IDs
-    current_ids = list(seen_ids)
-    for l in current_listings:
-        if l["id"] not in current_ids:
-            current_ids.append(l["id"])
+    log(f"📊 Total Listings Found: {len(current_listings)}")
 
-    if new_listings:
-        send_email(new_listings)
-
+    # Update Data Files
+    # 確保資料夾存在
     Path("data").mkdir(exist_ok=True)
-    output_data = {"lastUpdate": datetime.now().isoformat(), "listings": current_listings}
+    
+    # 1. Update JSON for Website (總是覆蓋，確保網站顯示最新)
+    output_data = {
+        "lastUpdate": datetime.now().isoformat(),
+        "listings": current_listings
+    }
     Path(CONFIG["OUTPUT_FILE"]).write_text(json.dumps(output_data, ensure_ascii=False, indent=2))
     
-    cache_data = {"last_run": datetime.now().isoformat(), "seen_ids": current_ids}
+    # 2. Update Cache (保留歷史紀錄)
+    new_ids = [l["id"] for l in current_listings]
+    seen_ids.update(new_ids)
+    
+    cache_data = {
+        "last_run": datetime.now().isoformat(),
+        "seen_ids": list(seen_ids)
+    }
     Path(CONFIG["CACHE_FILE"]).write_text(json.dumps(cache_data, indent=2))
-    log("💾 Data saved.")
+    
+    log("💾 Data saved successfully.")
+
+    # Email Logic (Optional: 只有在真的有新盤時才在這裡加)
+    # ... (保持你的 YAML 處理 email 或在此處加入，目前先專注於修復抓取)
 
 if __name__ == "__main__":
     main()
