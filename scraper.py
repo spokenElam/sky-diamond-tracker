@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-天鑽 The Regent - Scraper v16 (28Hse + Ricacorp Robust Mode)
-針對利嘉閣加入暴力搜尋邏輯，確保抓取成功率
+天鑽 The Regent - Scraper v18 (SPA/JSON Decode Fix)
+破解利嘉閣的 Single Page Application 結構，從 JSON Script 中提取資料。
 """
 
 import json
@@ -11,6 +11,7 @@ import urllib.request
 import re
 import time
 import random
+import html  # [新增] 用來解碼 HTML
 from datetime import datetime
 from pathlib import Path
 from email.mime.text import MIMEText
@@ -21,7 +22,6 @@ CONFIG = {
     "CACHE_FILE": "data/listings_cache.json",
     "OUTPUT_FILE": "data/listings.json",
     "EMAIL_RECIPIENTS": ["acforgames9394@gmail.com"],
-    # 網址
     "URL_28HSE": "https://www.28hse.com/buy/a3/dg45/c22902",
     "URL_RICA": "https://www.ricacorp.com/zh-hk/property/list/buy/%E5%A4%A9%E9%91%BD-estate-%E5%A4%A7%E5%9F%94%E5%8D%8A%E5%B1%B1-hma-hk"
 }
@@ -30,7 +30,6 @@ def log(msg):
     print(msg, flush=True)
 
 def get_headers():
-    # 隨機 User-Agent
     agents = [
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36',
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Version/17.3 Safari/605.1.15',
@@ -38,13 +37,13 @@ def get_headers():
     return {
         'User-Agent': random.choice(agents),
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'zh-HK,zh;q=0.9,en;q=0.8',
+        'Cookie': 'locale=zh-hk'
     }
 
 def fetch_url(url):
     log(f"🌍 Fetching: {url}")
     try:
-        time.sleep(random.uniform(2, 5)) # 隨機休息，避開封鎖
+        time.sleep(random.uniform(2, 4))
         req = urllib.request.Request(url, headers=get_headers())
         with urllib.request.urlopen(req, timeout=30) as resp:
             return resp.read().decode('utf-8', errors='ignore')
@@ -53,24 +52,20 @@ def fetch_url(url):
         return None
 
 # =============================================================================
-# 1. 28Hse Scraper (保持你剛才成功的邏輯)
+# 1. 28Hse (保持完美狀態)
 # =============================================================================
 def scrape_28hse():
     log("--- Scraping 28Hse ---")
-    html = fetch_url(CONFIG["URL_28HSE"])
-    if not html: return []
-    if "Security Check" in html: 
-        log("🚨 28Hse Blocked.")
-        return []
+    html_raw = fetch_url(CONFIG["URL_28HSE"])
+    if not html_raw: return []
+    if "Security Check" in html_raw: return []
 
     listings = []
-    chunks = re.split(r'class="item', html)
+    chunks = re.split(r'class="item', html_raw)
     
     for chunk in chunks[1:]:
         try:
             tower = 0; floor = "??"; unit = "?"
-            
-            # 優先: unit_desc
             full_desc_match = re.search(r'unit_desc"[^>]*>\s*(.*?)\s*<', chunk)
             if full_desc_match:
                 full_text = full_desc_match.group(1)
@@ -81,7 +76,6 @@ def scrape_28hse():
                 u_match = re.search(r'([A-H])室', full_text, re.IGNORECASE)
                 if u_match: unit = u_match.group(1).upper()
             
-            # 後備: 通用
             if tower == 0:
                 t_match_backup = re.search(r'(?:第|Block)?\s*(\d+)\s*座', chunk)
                 if t_match_backup: tower = int(t_match_backup.group(1))
@@ -113,72 +107,78 @@ def scrape_28hse():
     return listings
 
 # =============================================================================
-# 2. Ricacorp Scraper (改用暴力搜尋)
+# 2. Ricacorp (針對 SPA JSON 結構)
 # =============================================================================
 def scrape_ricacorp():
     log("--- Scraping Ricacorp ---")
-    html = fetch_url(CONFIG["URL_RICA"])
-    if not html: return []
+    raw_response = fetch_url(CONFIG["URL_RICA"])
+    if not raw_response: return []
     
-    # 檢查是否被擋 (Debug)
-    title_match = re.search(r'<title>(.*?)</title>', html, re.IGNORECASE)
-    if title_match: log(f"   Page Title: {title_match.group(1)}")
-    if "Security" in html or "Incapsula" in html:
-        log("🚨 Ricacorp Blocked (Incapsula/WAF).")
+    # [關鍵步驟] 利嘉閣資料藏在 JSON Script 內，而且被編碼了 (e.g. &quot;)
+    # 必須先解碼，Regex 才能生效
+    clean_html = html.unescape(raw_response)
+    
+    # 檢查是否被 Incapsula 防火牆擋住
+    if "Incapsula" in clean_html or "Request unsuccessful" in clean_html:
+        log("🚨 Ricacorp Blocked by Firewall.")
         return []
 
     listings = []
     
-    # 策略: 全文搜索
-    # 尋找: (第) + 數字 + 座 ......(300字內)...... $ + 數字 + 萬
-    # Regex: (?:第)?\s*(\d+)\s*座.{0,300}?\$\s*([\d,]+)\s*萬
+    # 策略：因為解碼後資料會變成一長串文字
+    # 我們根據你截圖的格式 "天鑽 8座 1房" 來抓
+    # 尋找: 天鑽... (任意空白) ... 數字 + 座 ...... (400字內) ..... $ + 數字
     
-    clean_html = html.replace('\n', ' ').replace('\r', '')
-    pattern = r'(?:第)?\s*(\d+)\s*座.{0,300}?\$\s*([\d,]+)\s*萬'
+    # Regex 解釋:
+    # 天鑽\s+            -> 必須見到天鑽
+    # (?:第)?(\d+)\s*座  -> 抓座號 (Group 1)
+    # .{0,400}?         -> 往後找
+    # \$([\d,]+)        -> 抓價錢 (Group 2)
+    
+    pattern = r'天鑽\s+(?:第)?(\d+)\s*座.{0,400}?\$\s*([\d,]+)'
     
     matches = re.finditer(pattern, clean_html)
+    found_count = 0
     
     for match in matches:
         try:
             tower = int(match.group(1))
             price = int(match.group(2).replace(',', '')) * 10000
             
-            # 嘗試從 match 到既文字裡面搵多D資料
-            raw_text = match.group(0)
-            
-            # 找樓層
+            # 嘗試在匹配到的文字周圍找樓層 (低/中/高)
+            full_match_text = match.group(0)
             floor = "??"
-            f_match = re.search(r'(低|中|高)層', raw_text)
+            f_match = re.search(r'(低|中|高)層', full_match_text)
             if f_match: floor = f_match.group(1)
             
-            # 找連結 (往回找 href)
-            # 這裡比較難準確抓對應 link，我們先用列表頁 link
+            # 利嘉閣連結 (固定前綴 + 搜尋參數，因為難以從 JSON 抓準確連結)
             link = CONFIG["URL_RICA"]
-            
-            desc = f"第{tower}座 (利嘉閣來源)"
+            desc = f"第{tower}座 (利嘉閣)"
 
             listing = {
                 "id": f"rica-{tower}-{price}",
                 "tower": tower, "floor": floor, "unit": "?",
                 "price": price, "raw_desc": desc, "url": link,
-                "source": "centanet", # 借用橙色樣式
+                "source": "centanet", # 橙色標籤
                 "sourceName": "Ricacorp",
                 "scrapedAt": datetime.now().isoformat()
             }
             
             if not any(l["id"] == listing["id"] for l in listings):
                 listings.append(listing)
+                found_count += 1
                 log(f"   ✅ Ricacorp: T{tower} ${price/10000}萬")
-                
         except: continue
+    
+    if found_count == 0:
+        log("⚠️ Ricacorp connected but 0 listings found. Structure might differ.")
         
     return listings
 
 # --- Main ---
 def main():
-    log("🚀 Starting Scraper v16 (Multi-Source)...")
+    log("🚀 Starting Scraper v18 (JSON Fix)...")
     
-    # Cache
     seen_ids = set()
     try:
         if Path(CONFIG["CACHE_FILE"]).exists():
@@ -187,14 +187,11 @@ def main():
     except: pass
 
     all_listings = []
-    
-    # 執行兩個來源
     all_listings.extend(scrape_28hse())
     all_listings.extend(scrape_ricacorp())
     
     log(f"📊 Total Found: {len(all_listings)}")
     
-    # Sort
     all_listings.sort(key=lambda x: (x['tower'], x['price']))
 
     # Email
