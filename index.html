@@ -30,6 +30,11 @@
         header { text-align: center; margin-bottom: 30px; border-bottom: 1px solid var(--border); padding-bottom: 20px; }
         h1 { color: var(--gold); margin: 0; font-size: 28px; }
         .sub-header { color: var(--text-sub); font-size: 14px; margin-top: 5px; }
+        .status-badge {
+            display: inline-block; background: rgba(0, 212, 170, 0.15); color: var(--green);
+            padding: 4px 12px; border-radius: 20px; font-size: 13px; margin-top: 10px;
+            border: 1px solid rgba(0, 212, 170, 0.3);
+        }
 
         /* --- 🔍 FILTER BAR (搜尋欄) --- */
         .search-box-container {
@@ -88,8 +93,8 @@
             border-radius: 4px; border: 1px solid #444; margin-top: 5px;
         }
         .source-tag.hse28 { color: #8bc34a; border-color: #8bc34a; }
-        .source-tag.centanet { color: #ff6b35; border-color: #ff6b35; } /* 橙色 */
-        .source-tag.hkp { color: #9c27b0; border-color: #9c27b0; } /* 紫色 */
+        .source-tag.centanet { color: #ff6b35; border-color: #ff6b35; } /* 橙色 - 利嘉閣/中原 */
+        .source-tag.hkp { color: #9c27b0; border-color: #9c27b0; } /* 紫色 - Squarefoot */
 
         .btn-view {
             display: inline-block; margin-top: 5px;
@@ -113,11 +118,12 @@
 <div class="container">
     <header>
         <h1>💎 天鑽放盤監控</h1>
+        <div class="status-badge">📡 監控範圍: 全天鑽所有座數 (All Towers)</div>
         <div class="sub-header" id="last-update">載入中...</div>
     </header>
 
     <div class="search-box-container">
-        <input type="text" id="searchInput" class="search-input" placeholder="🔍 搜尋/篩選: 例如 '8座', '低層', '600萬', '中原'...">
+        <input type="text" id="searchInput" class="search-input" placeholder="🔍 搜尋/篩選: 例如 '8座', '低層', '600萬', 'Squarefoot'...">
     </div>
 
     <div class="stats-bar">
@@ -155,7 +161,7 @@
 
         container.innerHTML = list.map(l => {
             // 處理標題
-            const tStr = l.tower > 0 ? `第${l.tower}座` : "天鑽";
+            const tStr = l.tower > 0 ? `第${l.tower}座` : "天鑽 (未詳座數)";
             const fStr = l.floor && l.floor !== "??" ? l.floor : "";
             const uStr = l.unit && l.unit !== "?" ? `${l.unit}室` : "";
             const isNew = (new Date() - new Date(l.scrapedAt)) < 86400000; // 24小時內為新
