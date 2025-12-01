@@ -161,11 +161,17 @@
             font-size: 1.05rem;
             font-weight: 600;
             margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
         }
-        .listing-main h3 .en { 
-            font-weight: 400;
+        .raw-desc {
+            display: block;
+            font-size: 0.85rem;
             color: var(--text-secondary);
-            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            font-weight: normal;
         }
         .new-badge {
             display: inline-block;
@@ -174,7 +180,7 @@
             border-radius: 4px;
             font-size: 0.65rem;
             font-weight: 700;
-            margin-left: 0.5rem;
+            color: white;
             vertical-align: middle;
         }
         .listing-details {
@@ -206,6 +212,7 @@
             border-radius: 6px;
             font-size: 0.8rem;
         }
+        /* Agent colors */
         .agent.centanet { border-color: #ff6b35; color: #ff6b35; }
         .agent.midland { border-color: #00a0e9; color: #00a0e9; }
         .agent.hse28 { border-color: #8bc34a; color: #8bc34a; }
@@ -288,7 +295,7 @@
             .stats { grid-template-columns: 1fr; }
             .source-grid { grid-template-columns: 1fr; }
             .listing-item { grid-template-columns: 1fr; }
-            .listing-actions { flex-direction: row; margin-top: 0.5rem; }
+            .listing-actions { flex-direction: row; margin-top: 0.5rem; justify-content: space-between; width: 100%; }
             .status-bar { gap: 1rem; }
         }
     </style>
@@ -303,7 +310,7 @@
             <div class="status-bar">
                 <div class="status-item">
                     <span class="status-dot"></span>
-                    <span>每2小時自動更新 Auto-update every 2 hours</span>
+                    <span>自動更新 (Auto-update)</span>
                 </div>
                 <div class="status-item">
                     <span>🕐</span>
@@ -313,11 +320,10 @@
         </header>
         
         <div class="criteria">
-            <div class="criteria-title">篩選條件 Filter Criteria</div>
+            <div class="criteria-title">目前篩選條件 Filter Criteria</div>
             <div class="criteria-tags">
-                <span class="tag highlight">🏢 第8,9,10,11,12,13,15,16,18座</span>
-                <span class="tag">🛏️ 1-2房 1-2 Rooms</span>
-                <span class="tag">📐 &lt;600呎 &lt;600 sq.ft.</span>
+                <span class="tag highlight">🏢 第 8-13, 15, 16, 18 座</span>
+                <span class="tag">📋 顯示所有放盤 (Show All)</span>
             </div>
         </div>
         
@@ -349,53 +355,34 @@
         </div>
         
         <div class="sources">
-            <h3>🔗 直接睇放盤 Direct Links to Listings</h3>
+            <h3>🔗 快速連結 Quick Links</h3>
             <div class="source-grid">
                 <a href="https://hk.centanet.com/estate/The-Regent/2-DEPPWPPJPB" target="_blank" class="source-link">
                     <div class="source-icon" style="background:rgba(255,107,53,0.15);">🏠</div>
-                    <div>
-                        <div class="source-name" style="color:#ff6b35;">中原地產 Centaline</div>
-                        <div class="source-domain">centanet.com</div>
-                    </div>
+                    <div><div class="source-name" style="color:#ff6b35;">中原地產 Centaline</div></div>
                 </a>
                 <a href="https://www.midland.com.hk/zh-hk/estate/New-Territories-%E5%A4%A7%E5%9F%94%E5%8D%8A%E5%B1%B1-The-Regent-E000016716" target="_blank" class="source-link">
                     <div class="source-icon" style="background:rgba(0,160,233,0.15);">🏠</div>
-                    <div>
-                        <div class="source-name" style="color:#00a0e9;">美聯物業 Midland</div>
-                        <div class="source-domain">midland.com.hk</div>
-                    </div>
+                    <div><div class="source-name" style="color:#00a0e9;">美聯物業 Midland</div></div>
                 </a>
                 <a href="https://www.28hse.com/buy/residential/a3/dg45/c22902" target="_blank" class="source-link">
                     <div class="source-icon" style="background:rgba(139,195,74,0.15);">🏠</div>
-                    <div>
-                        <div class="source-name" style="color:#8bc34a;">28Hse</div>
-                        <div class="source-domain">28hse.com</div>
-                    </div>
+                    <div><div class="source-name" style="color:#8bc34a;">28Hse</div></div>
                 </a>
                 <a href="https://www.hkp.com.hk/zh-hk/estate/New-Territories-Tai-Po-The-Regent-E000016716" target="_blank" class="source-link">
                     <div class="source-icon" style="background:rgba(156,39,176,0.15);">🏠</div>
-                    <div>
-                        <div class="source-name" style="color:#9c27b0;">香港置業 HK Property</div>
-                        <div class="source-domain">hkp.com.hk</div>
-                    </div>
+                    <div><div class="source-name" style="color:#9c27b0;">香港置業 HK Property</div></div>
                 </a>
             </div>
         </div>
         
         <footer>
             <p>自動監控系統 Automated Tracking System</p>
-            <p>Powered by <a href="https://github.com/features/actions" target="_blank">GitHub Actions</a></p>
+            <p>Powered by GitHub Actions</p>
         </footer>
     </div>
     
     <script>
-        const SOURCES = {
-            centanet: { zh: '中原地產', en: 'Centaline' },
-            midland: { zh: '美聯物業', en: 'Midland' },
-            hse28: { zh: '28Hse', en: '28Hse' },
-            hkp: { zh: '香港置業', en: 'HK Property' }
-        };
-        
         function formatPrice(price) {
             if (price >= 100000000) return `$${(price/100000000).toFixed(2)}億`;
             return `$${(price/10000).toFixed(0)}萬`;
@@ -440,23 +427,38 @@
             
             container.innerHTML = listings.map((l, i) => {
                 const isNew = isToday(l.scrapedAt);
+                
+                // 處理可能缺失的資料
+                const hasSize = l.size && l.size > 0;
+                const hasRooms = l.rooms && l.rooms > 0;
+                const floorText = l.floor && l.floor !== '??' ? `${l.floor}樓` : '';
+                const unitText = l.unit && l.unit !== '?' ? `${l.unit}室` : '';
+                
+                // 如果沒有具體樓層/室，顯示原始描述
+                const titleText = (floorText || unitText) 
+                    ? `第${l.tower}座 ${floorText} ${unitText}`
+                    : `第${l.tower}座 (詳細見描述)`;
+
                 return `
                 <div class="listing-item">
                     <div class="listing-main">
                         <h3>
-                            第${l.tower}座 ${l.floor}樓 ${l.unit}室
-                            <span class="en">T${l.tower} ${l.floor}/F Flat ${l.unit}</span>
+                            ${titleText}
                             ${isNew ? '<span class="new-badge">NEW</span>' : ''}
                         </h3>
+                        
+                        <span class="raw-desc">${l.raw_desc || ''}</span>
+                        
                         <div class="listing-details">
                             <span class="listing-detail price">${formatPrice(l.price)}</span>
-                            <span class="listing-detail">📐 ${l.size}呎</span>
-                            <span class="listing-detail">${formatPriceFt(l.pricePerFt)}</span>
-                            <span class="rooms">${l.rooms}房 ${l.rooms}R</span>
+                            
+                            ${hasSize ? `<span class="listing-detail">📐 ${l.size}呎</span>` : ''}
+                            ${hasSize ? `<span class="listing-detail">${formatPriceFt(l.pricePerFt)}</span>` : ''}
+                            ${hasRooms ? `<span class="rooms">${l.rooms}房</span>` : ''}
                         </div>
                     </div>
                     <div class="listing-actions">
-                        <span class="agent ${l.source}">🏢 ${l.sourceName}</span>
+                        <span class="agent ${l.source}">🏢 ${l.sourceName || '28Hse'}</span>
                         <a href="${l.url}" target="_blank" class="view-btn">查看 View →</a>
                         <span class="listing-time">${timeAgo(l.scrapedAt)}</span>
                     </div>
@@ -470,8 +472,11 @@
             const newToday = listings.filter(l => isToday(l.scrapedAt)).length;
             document.getElementById('new-count').textContent = newToday;
             
-            if (listings.length > 0) {
-                const avg = Math.round(listings.reduce((s,l) => s + l.pricePerFt, 0) / listings.length);
+            // 只計算有呎數資料的放盤
+            const validListings = listings.filter(l => l.pricePerFt > 0);
+            
+            if (validListings.length > 0) {
+                const avg = Math.round(validListings.reduce((s,l) => s + l.pricePerFt, 0) / validListings.length);
                 document.getElementById('avg-price').textContent = `$${avg.toLocaleString()}`;
             } else {
                 document.getElementById('avg-price').textContent = '-';
@@ -480,13 +485,15 @@
         
         async function loadData() {
             try {
-                const response = await fetch('data/listings.json');
+                // 增加時間參數避免瀏覽器緩存舊的 JSON
+                const response = await fetch(`data/listings.json?t=${new Date().getTime()}`);
                 const data = await response.json();
                 
                 document.getElementById('last-update').textContent = 
-                    `上次更新 Last update: ${timeAgo(data.lastUpdate)}`;
+                    `Last update: ${timeAgo(data.lastUpdate)}`;
                 
                 const listings = data.listings || [];
+                // 排序：新抓取的排前面
                 listings.sort((a,b) => new Date(b.scrapedAt) - new Date(a.scrapedAt));
                 
                 renderListings(listings);
@@ -497,9 +504,8 @@
                 document.getElementById('listings-container').innerHTML = `
                     <div class="empty">
                         <div class="empty-icon">⚠️</div>
-                        <p>無法載入數據</p>
-                        <p>Failed to load data</p>
-                        <p style="font-size:0.8rem;margin-top:1rem;">請稍後再試或直接訪問上方連結</p>
+                        <p>無法載入數據 (Failed to load data)</p>
+                        <p style="font-size:0.8rem;margin-top:1rem;color:#666;">請稍後再試</p>
                     </div>`;
             }
         }
