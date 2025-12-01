@@ -35,8 +35,7 @@ CONFIG = {
     
     # Email recipients 收件人
     "EMAIL_RECIPIENTS": [
-        "acforgames9394@gmail.com",
-        "antonicsasaa@gmail.com"
+        "acforgames9394@gmail.com"
     ],
     
     # Data sources 數據來源
