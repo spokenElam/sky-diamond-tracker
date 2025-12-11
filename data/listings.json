@@ -1,5 +1,5 @@
 {
-  "lastUpdate": "2025-12-11T01:44:37.177877",
+  "lastUpdate": "2025-12-11T03:25:11.963022",
   "listings": [
     {
       "id": "sqft-6-8980000",
@@ -11,7 +11,7 @@
       "url": "https://www.squarefoot.com.hk/buy?propertyDoSearchVersion=2.0&searchText=%E5%A4%A9%E9%91%BD&locations=&district_group_hk=&district_group_kw=&district_group_nt=&district_group_islands=&district_group_sch_pri=&district_group_sch_sec=&district_group_university=&price=&price=&mainType=&roomRange=",
       "source": "hkp",
       "sourceName": "Squarefoot",
-      "scrapedAt": "2025-12-11T01:44:31.705764"
+      "scrapedAt": "2025-12-11T03:25:08.470712"
     },
     {
       "id": "28hse-8-4600000",
@@ -23,7 +23,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3666628",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-11T01:44:26.709273"
+      "scrapedAt": "2025-12-11T03:25:03.235769"
     },
     {
       "id": "28hse-8-4650000",
@@ -35,7 +35,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3666909",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-11T01:44:26.709145"
+      "scrapedAt": "2025-12-11T03:25:03.235638"
     },
     {
       "id": "28hse-8-5900000",
@@ -47,7 +47,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3640202",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-11T01:44:26.710890"
+      "scrapedAt": "2025-12-11T03:25:03.237460"
     },
     {
       "id": "28hse-8-5980000",
@@ -59,7 +59,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3656049",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-11T01:44:26.710411"
+      "scrapedAt": "2025-12-11T03:25:03.236983"
     },
     {
       "id": "28hse-8-5990000",
@@ -71,7 +71,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3665763",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-11T01:44:26.709395"
+      "scrapedAt": "2025-12-11T03:25:03.235906"
     },
     {
       "id": "28hse-8-6000000",
@@ -83,7 +83,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3641339",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-11T01:44:26.710769"
+      "scrapedAt": "2025-12-11T03:25:03.237330"
     },
     {
       "id": "28hse-8-6050000",
@@ -95,7 +95,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3665338",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-11T01:44:26.709816"
+      "scrapedAt": "2025-12-11T03:25:03.236333"
     },
     {
       "id": "sqft-8-7280000",
@@ -107,7 +107,7 @@
       "url": "https://www.squarefoot.com.hk/buy?propertyDoSearchVersion=2.0&searchText=%E5%A4%A9%E9%91%BD&locations=&district_group_hk=&district_group_kw=&district_group_nt=&district_group_islands=&district_group_sch_pri=&district_group_sch_sec=&district_group_university=&price=&price=&mainType=&roomRange=",
       "source": "hkp",
       "sourceName": "Squarefoot",
-      "scrapedAt": "2025-12-11T01:44:31.706337"
+      "scrapedAt": "2025-12-11T03:25:08.471330"
     },
     {
       "id": "sqft-9-6880000",
@@ -119,7 +119,7 @@
       "url": "https://www.squarefoot.com.hk/buy?propertyDoSearchVersion=2.0&searchText=%E5%A4%A9%E9%91%BD&locations=&district_group_hk=&district_group_kw=&district_group_nt=&district_group_islands=&district_group_sch_pri=&district_group_sch_sec=&district_group_university=&price=&price=&mainType=&roomRange=",
       "source": "hkp",
       "sourceName": "Squarefoot",
-      "scrapedAt": "2025-12-11T01:44:31.705483"
+      "scrapedAt": "2025-12-11T03:25:08.470438"
     },
     {
       "id": "sqft-9-8000000",
@@ -131,7 +131,7 @@
       "url": "https://www.squarefoot.com.hk/buy?propertyDoSearchVersion=2.0&searchText=%E5%A4%A9%E9%91%BD&locations=&district_group_hk=&district_group_kw=&district_group_nt=&district_group_islands=&district_group_sch_pri=&district_group_sch_sec=&district_group_university=&price=&price=&mainType=&roomRange=",
       "source": "hkp",
       "sourceName": "Squarefoot",
-      "scrapedAt": "2025-12-11T01:44:31.706875"
+      "scrapedAt": "2025-12-11T03:25:08.471919"
     },
     {
       "id": "28hse-9-8380000",
@@ -143,7 +143,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3656389",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-11T01:44:26.710169"
+      "scrapedAt": "2025-12-11T03:25:03.236721"
     },
     {
       "id": "28hse-10-6000000",
@@ -155,7 +155,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3665379",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-11T01:44:26.709547"
+      "scrapedAt": "2025-12-11T03:25:03.236053"
     },
     {
       "id": "sqft-10-6080000",
@@ -167,7 +167,7 @@
       "url": "https://www.squarefoot.com.hk/buy?propertyDoSearchVersion=2.0&searchText=%E5%A4%A9%E9%91%BD&locations=&district_group_hk=&district_group_kw=&district_group_nt=&district_group_islands=&district_group_sch_pri=&district_group_sch_sec=&district_group_university=&price=&price=&mainType=&roomRange=",
       "source": "hkp",
       "sourceName": "Squarefoot",
-      "scrapedAt": "2025-12-11T01:44:31.706051"
+      "scrapedAt": "2025-12-11T03:25:08.471006"
     },
     {
       "id": "sqft-10-6880000",
@@ -179,7 +179,7 @@
       "url": "https://www.squarefoot.com.hk/buy?propertyDoSearchVersion=2.0&searchText=%E5%A4%A9%E9%91%BD&locations=&district_group_hk=&district_group_kw=&district_group_nt=&district_group_islands=&district_group_sch_pri=&district_group_sch_sec=&district_group_university=&price=&price=&mainType=&roomRange=",
       "source": "hkp",
       "sourceName": "Squarefoot",
-      "scrapedAt": "2025-12-11T01:44:31.706592"
+      "scrapedAt": "2025-12-11T03:25:08.471628"
     },
     {
       "id": "28hse-13-5780000",
@@ -191,7 +191,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3245278",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-11T01:44:26.710284"
+      "scrapedAt": "2025-12-11T03:25:03.236852"
     },
     {
       "id": "28hse-13-6800000",
@@ -203,7 +203,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3664236",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-11T01:44:26.709943"
+      "scrapedAt": "2025-12-11T03:25:03.236446"
     },
     {
       "id": "28hse-16-6800000",
@@ -215,7 +215,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3665345",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-11T01:44:26.709687"
+      "scrapedAt": "2025-12-11T03:25:03.236194"
     },
     {
       "id": "28hse-19-7180000",
@@ -227,7 +227,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3651874",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-11T01:44:26.710528"
+      "scrapedAt": "2025-12-11T03:25:03.237095"
     },
     {
       "id": "28hse-19-7280000",
@@ -239,7 +239,7 @@
       "url": "https://www.28hse.com/buy/apartment/property-3651540",
       "source": "hse28",
       "sourceName": "28Hse",
-      "scrapedAt": "2025-12-11T01:44:26.710650"
+      "scrapedAt": "2025-12-11T03:25:03.237222"
     }
   ]
 }
