@@ -1,4 +1,173 @@
 {
-  "lastUpdate": "2026-01-05T20:26:40.487651",
-  "listings": []
+  "lastUpdate": "2026-01-05T22:21:30.587288",
+  "listings": [
+    {
+      "id": "sqft-6-8980000",
+      "tower": 6,
+      "floor": "低",
+      "unit": "?",
+      "price": 8980000,
+      "raw_desc": "第6座 (Squarefoot)",
+      "url": "https://www.squarefoot.com.hk/buy?propertyDoSearchVersion=2.0&searchText=%E5%A4%A9%E9%91%BD&locations=&district_group_hk=&district_group_kw=&district_group_nt=&district_group_islands=&district_group_sch_pri=&district_group_sch_sec=&district_group_university=&price=&price=&mainType=&roomRange=",
+      "source": "hkp",
+      "sourceName": "Squarefoot",
+      "scrapedAt": "2026-01-05T22:21:25.436971"
+    },
+    {
+      "id": "28hse-6-9000000",
+      "tower": 6,
+      "floor": "低",
+      "unit": "B",
+      "price": 9000000,
+      "raw_desc": "tem \" > 9 黃金 *最筍3房* 溫馨* 實用3房套+工人套 大埔 天鑽 | 6座 低層 B室...",
+      "url": "https://www.28hse.com/buy/apartment/property-3680800",
+      "source": "hse28",
+      "sourceName": "28Hse",
+      "scrapedAt": "2026-01-05T22:21:21.515971"
+    },
+    {
+      "id": "28hse-7-6200000",
+      "tower": 7,
+      "floor": "中",
+      "unit": "?",
+      "price": 6200000,
+      "raw_desc": "tem \" > 8 黃金 天鑽＊實用兩房＊翠綠山景， 實盤 11 小時前 刊登 大埔 天鑽 | 7座...",
+      "url": "https://www.28hse.com/buy/apartment/property-3697869",
+      "source": "hse28",
+      "sourceName": "28Hse",
+      "scrapedAt": "2026-01-05T22:21:21.515044"
+    },
+    {
+      "id": "28hse-7-6300000",
+      "tower": 7,
+      "floor": "低",
+      "unit": "F",
+      "price": 6300000,
+      "raw_desc": "tem \" > 7 黃金 天鑽 (2房 梗廚) 大埔 天鑽 | 7座 低層 F室 實用面積: 528...",
+      "url": "https://www.28hse.com/buy/apartment/property-3693137",
+      "source": "hse28",
+      "sourceName": "28Hse",
+      "scrapedAt": "2026-01-05T22:21:21.515455"
+    },
+    {
+      "id": "28hse-8-6280000",
+      "tower": 8,
+      "floor": "低",
+      "unit": "?",
+      "price": 6280000,
+      "raw_desc": "tem \" > 5 黃金 *天鑽專組* 專組 先知係好野!! 梗廚兩房!!!安靜最方便最抵買!! 大...",
+      "url": "https://www.28hse.com/buy/apartment/property-3687268",
+      "source": "hse28",
+      "sourceName": "28Hse",
+      "scrapedAt": "2026-01-05T22:21:21.515763"
+    },
+    {
+      "id": "sqft-8-7280000",
+      "tower": 8,
+      "floor": "??",
+      "unit": "?",
+      "price": 7280000,
+      "raw_desc": "第8座 (Squarefoot)",
+      "url": "https://www.squarefoot.com.hk/buy?propertyDoSearchVersion=2.0&searchText=%E5%A4%A9%E9%91%BD&locations=&district_group_hk=&district_group_kw=&district_group_nt=&district_group_islands=&district_group_sch_pri=&district_group_sch_sec=&district_group_university=&price=&price=&mainType=&roomRange=",
+      "source": "hkp",
+      "sourceName": "Squarefoot",
+      "scrapedAt": "2026-01-05T22:21:25.437265"
+    },
+    {
+      "id": "28hse-10-5100000",
+      "tower": 10,
+      "floor": "高",
+      "unit": "E",
+      "price": 5100000,
+      "raw_desc": "tem \" > 11 黃金 **業主急走**東南高層山景，約睇 大埔 天鑽 | 10座 高層 E室 ...",
+      "url": "https://www.28hse.com/buy/apartment/property-3674721",
+      "source": "hse28",
+      "sourceName": "28Hse",
+      "scrapedAt": "2026-01-05T22:21:21.516596"
+    },
+    {
+      "id": "28hse-11-9200000",
+      "tower": 11,
+      "floor": "高",
+      "unit": "H",
+      "price": 9200000,
+      "raw_desc": "tem \" > 18 黃金 高層開揚，東南山景 大埔 天鑽 | 11座 高層 H室 實用面積: 74...",
+      "url": "https://www.28hse.com/buy/apartment/property-3675991",
+      "source": "hse28",
+      "sourceName": "28Hse",
+      "scrapedAt": "2026-01-05T22:21:21.516228"
+    },
+    {
+      "id": "28hse-13-5780000",
+      "tower": 13,
+      "floor": "低",
+      "unit": "C",
+      "price": 5780000,
+      "raw_desc": "tem \" > 8 黃金 《天鑽專組》全場最筍大2房 有景有裝 手快有手慢冇 大埔 天鑽 | 13座...",
+      "url": "https://www.28hse.com/buy/apartment/property-3245278",
+      "source": "hse28",
+      "sourceName": "28Hse",
+      "scrapedAt": "2026-01-05T22:21:21.515587"
+    },
+    {
+      "id": "28hse-13-6800000",
+      "tower": 13,
+      "floor": "中",
+      "unit": "G",
+      "price": 6800000,
+      "raw_desc": "tem \" > 14 黃金 翠綠山景，環境清幽 大埔 天鑽 | 13座 中層 G室 實用面積: 52...",
+      "url": "https://www.28hse.com/buy/apartment/property-3675955",
+      "source": "hse28",
+      "sourceName": "28Hse",
+      "scrapedAt": "2026-01-05T22:21:21.516502"
+    },
+    {
+      "id": "28hse-19-7280000",
+      "tower": 19,
+      "floor": "中",
+      "unit": "C",
+      "price": 7280000,
+      "raw_desc": "tem \" > 10 黃金 天鑽 大埔 天鑽 | 19座 中層 C室 實用面積: 584 呎 @12...",
+      "url": "https://www.28hse.com/buy/apartment/property-3675972",
+      "source": "hse28",
+      "sourceName": "28Hse",
+      "scrapedAt": "2026-01-05T22:21:21.516385"
+    },
+    {
+      "id": "28hse-19-8800000",
+      "tower": 19,
+      "floor": "??",
+      "unit": "B",
+      "price": 8800000,
+      "raw_desc": "tem \" > 6 黃金 《特色花園單位》《花園466呎》 大埔 天鑽 | 19座 地下 B室 實用...",
+      "url": "https://www.28hse.com/buy/apartment/property-3682014",
+      "source": "hse28",
+      "sourceName": "28Hse",
+      "scrapedAt": "2026-01-05T22:21:21.515865"
+    },
+    {
+      "id": "28hse-19-8880000",
+      "tower": 19,
+      "floor": "低",
+      "unit": "E",
+      "price": 8880000,
+      "raw_desc": "tem \" > 10 黃金 天鑽 (3房1套 梗廚) 大埔 天鑽 | 19座 低層 E室 實用面積:...",
+      "url": "https://www.28hse.com/buy/apartment/property-3693140",
+      "source": "hse28",
+      "sourceName": "28Hse",
+      "scrapedAt": "2026-01-05T22:21:21.515337"
+    },
+    {
+      "id": "28hse-19-9000000",
+      "tower": 19,
+      "floor": "低",
+      "unit": "E",
+      "price": 9000000,
+      "raw_desc": "tem \" > 11 黃金 罕有放盤，套房精裝 大埔 天鑽 | 19座 低層 E室 實用面積: 74...",
+      "url": "https://www.28hse.com/buy/apartment/property-3675974",
+      "source": "hse28",
+      "sourceName": "28Hse",
+      "scrapedAt": "2026-01-05T22:21:21.516310"
+    }
+  ]
 }
